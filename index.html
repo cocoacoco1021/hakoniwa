@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#0b0d12" />
+  <meta name="description" content="砂・水・火・油などが相互作用する粉遊び（Falling Sand）サンドボックス。WebGL2で発光表現。" />
+  <title>Falling Sand — 粉遊び</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <!-- タイトルと操作ヒント（クリックを妨げないよう pointer-events は無効） -->
+  <div class="overlay">
+    <h1 class="overlay__title">Falling Sand</h1>
+    <p class="overlay__hint">素材を選んで画面をなぞる ／ Space=停止 ／ C=全消去</p>
+  </div>
+
+  <!-- 操作パネル：素材パレット・筆サイズ・停止・消去 -->
+  <div class="toolbar">
+    <div class="palette" id="palette" aria-label="素材パレット"></div>
+    <div class="controls">
+      <label class="controls__brush">
+        筆
+        <input type="range" id="brush-size" aria-label="筆の大きさ" />
+      </label>
+      <button type="button" id="toggle-pause" class="controls__btn" aria-pressed="false">停止</button>
+      <button type="button" id="clear" class="controls__btn">消去</button>
+    </div>
+  </div>
+
+  <!-- WebGL/描画非対応時のフォールバック -->
+  <p class="fallback">お使いのブラウザは描画に対応していないため表示できません。</p>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
