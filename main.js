@@ -4,6 +4,7 @@
 import { CONFIG } from "./src/config.js";
 import { Simulation } from "./src/simulation.js";
 import { createRenderer } from "./src/renderer.js";
+import { createCreatureOverlay } from "./src/overlay.js";
 import { computeGrid } from "./src/layout.js";
 import { forEachBrushCell } from "./src/brush.js";
 import { MAT, MATERIALS } from "./src/materials.js";
@@ -22,6 +23,7 @@ const PALETTE_ORDER = [
 // アプリ全体で共有する状態
 let sim;
 let renderer;
+let overlay; // 虫のドット絵レイヤー（生成に失敗しても本体は動かす）
 let selectedMaterial = MAT.SAND;
 let brushRadius = CONFIG.brush.radius;
 let paused = false;
@@ -52,6 +54,16 @@ function boot() {
     logger.error("描画器の初期化に失敗しました", error);
     document.body.classList.add("no-webgl");
     return;
+  }
+
+  // 虫のドット絵レイヤーを重ねる。失敗しても本体描画は継続する（虫は素の色ブロックで見える）。
+  try {
+    const overlayCanvas = document.getElementById("creatures");
+    sizeCanvas(overlayCanvas);
+    overlay = createCreatureOverlay(overlayCanvas, cols, rows, CONFIG.render);
+    overlay.resize(overlayCanvas.width, overlayCanvas.height);
+  } catch (error) {
+    logger.error("虫のドット絵レイヤーの初期化に失敗しました", error);
   }
 
   buildPalette();
@@ -140,6 +152,9 @@ function bindControls() {
     // グリッドは作り直さず（描いた内容を保持）、表示サイズだけ追従させる
     sizeCanvas(document.getElementById("scene"));
     renderer.resize(window.innerWidth, window.innerHeight);
+    const overlayCanvas = document.getElementById("creatures");
+    sizeCanvas(overlayCanvas);
+    if (overlay) overlay.resize(overlayCanvas.width, overlayCanvas.height);
   });
 }
 
@@ -188,6 +203,7 @@ function paintAt(clientX, clientY) {
 function loop() {
   if (!paused) sim.step();
   renderer.render(sim.grid);
+  if (overlay) overlay.render(sim.grid); // 本体の上へ虫のドット絵を重ねる
   requestAnimationFrame(loop);
 }
 

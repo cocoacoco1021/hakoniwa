@@ -49,5 +49,7 @@ export const CONFIG = {
     glowStrength: 0.9, // 発光素材(火/溶岩)のにじみ強度（WebGL2経路のみ）
     glowRadius: 1.7, // グローのサンプル半径（テクセル単位）
     cellJitter: 0.14, // 非発光素材の明度ゆらぎ（のっぺり感を抑える）
+    bugSpriteCells: 3, // 虫のドット絵が占める画面上のセル数（1セルの個体を数セル分へ拡大表示）
+    bugSpriteDark: 0x7a0f3d, // 虫のドット絵の副色（頭・脚・斑）。体色より暗い赤紫で、体上でも背景上でも視認できる
   },
 };
