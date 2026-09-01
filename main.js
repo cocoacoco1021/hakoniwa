@@ -16,7 +16,7 @@ const logger = {
 // パレットに出す素材の並び（EMPTY=消しゴムを先頭に）
 const PALETTE_ORDER = [
   MAT.EMPTY, MAT.SAND, MAT.WATER, MAT.OIL, MAT.FIRE,
-  MAT.WOOD, MAT.PLANT, MAT.LAVA, MAT.ACID, MAT.WALL,
+  MAT.WOOD, MAT.PLANT, MAT.BUG, MAT.LAVA, MAT.ACID, MAT.WALL,
 ];
 
 // アプリ全体で共有する状態
@@ -37,7 +37,13 @@ function boot() {
   sizeCanvas(canvas);
 
   const { cols, rows } = computeGrid(window.innerWidth, window.innerHeight, CONFIG.grid);
-  sim = new Simulation({ cols, rows, random: Math.random, physics: CONFIG.physics });
+  sim = new Simulation({
+    cols,
+    rows,
+    random: Math.random,
+    physics: CONFIG.physics,
+    creatures: CONFIG.creatures,
+  });
 
   try {
     renderer = createRenderer(canvas, cols, rows, CONFIG.render);

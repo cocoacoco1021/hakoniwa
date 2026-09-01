@@ -31,6 +31,19 @@ export const CONFIG = {
     lavaSmokeChance: 0.04, // 溶岩が真上へ煙を噴く確率
     extinguishChance: 0.5, // 火が隣の水で消える確率（水は蒸気になる）
   },
+  // 生きもの（虫）の生態パラメータ。エネルギーは life 配列に格納する（単位はフレーム相当）。
+  // 生態系ループ（植物→採餌→繁殖→餌枯れ→餓死→植物再生）のバランスをここで調整する。
+  creatures: {
+    bugStartEnergy: 240, // 生成時／出生時のエネルギー。0になると餓死する
+    bugMaxEnergy: 480, // エネルギー上限（食べ過ぎの頭打ち）
+    bugEatEnergy: 160, // 植物を1つ食べて回復する量
+    bugReproEnergy: 360, // これ以上のエネルギーで繁殖を試みる
+    bugReproCost: 220, // 繁殖で親が失うエネルギー
+    bugReproChance: 0.1, // 条件を満たしたとき実際に繁殖する確率
+    bugSenseRadius: 6, // 餌・危険を感知する範囲（セル）
+    bugDigChance: 0.3, // 進路上の砂を掘って進む確率（粘りの表現）
+    bugMoveChance: 0.65, // 徘徊で実際に1歩動く確率（せかせか感の調整）
+  },
   render: {
     background: 0x0b0d12, // 空セル（背景）の色
     glowStrength: 0.9, // 発光素材(火/溶岩)のにじみ強度（WebGL2経路のみ）

@@ -21,6 +21,7 @@ export const MAT = {
   PLANT: 9,
   LAVA: 10,
   ACID: 11,
+  BUG: 12,
 };
 
 // behavior はステップ処理の分岐キー。physics 側はこれで挙動を選ぶ。
@@ -33,6 +34,7 @@ export const MAT = {
 //   lava   : 溶岩（重い液体＋着火＋水で固化）
 //   acid   : 酸（液体＋可溶物を溶かす）
 //   plant  : 植物（静止＋水へ成長。可燃）
+//   creature: 生きもの（虫）。意思を持って動く個体。採餌・繁殖・逃避・餓死する
 export const MATERIALS = [
   { id: MAT.EMPTY, key: "empty", label: "消しゴム", behavior: "empty", density: 1, color: 0x0b0d12, emissive: 0, flammable: false },
   { id: MAT.WALL, key: "wall", label: "壁", behavior: "static", density: Infinity, color: 0x6b7280, emissive: 0, flammable: false },
@@ -46,6 +48,8 @@ export const MATERIALS = [
   { id: MAT.PLANT, key: "plant", label: "植物", behavior: "plant", density: Infinity, color: 0x2fbf4f, emissive: 0, flammable: true },
   { id: MAT.LAVA, key: "lava", label: "溶岩", behavior: "lava", density: 6, color: 0xff6a00, emissive: 220, flammable: false },
   { id: MAT.ACID, key: "acid", label: "酸", behavior: "acid", density: 4, color: 0x9be600, emissive: 0, flammable: false },
+  // 虫は密度Infinity＝他素材から押し流されない（＝isStatic扱い）。移動は creature ロジックが担う。
+  { id: MAT.BUG, key: "bug", label: "虫", behavior: "creature", density: Infinity, color: 0xff2d95, emissive: 0, flammable: false },
 ];
 
 // ID から素材定義を引くための添字表（配列添字＝ID なのでそのまま使える）。
