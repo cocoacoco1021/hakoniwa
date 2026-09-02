@@ -6,8 +6,8 @@ import { Simulation } from "./src/simulation.js";
 import { createRenderer } from "./src/renderer.js";
 import { createCreatureOverlay } from "./src/overlay.js";
 import { computeGrid } from "./src/layout.js";
-import { forEachBrushCell } from "./src/brush.js";
 import { MAT, MATERIALS } from "./src/materials.js";
+import { paintMaterial, supportsContinuousPaint } from "./src/painting.js";
 
 // 通常フローで console.log は使わない方針。エラー記録だけ軽量ロガーに集約する。
 const logger = {
@@ -17,13 +17,13 @@ const logger = {
 // パレットに出す素材の並び（EMPTY=消しゴムを先頭に）
 const PALETTE_ORDER = [
   MAT.EMPTY, MAT.SAND, MAT.WATER, MAT.OIL, MAT.FIRE,
-  MAT.WOOD, MAT.PLANT, MAT.BUG, MAT.LAVA, MAT.ACID, MAT.WALL,
+  MAT.WOOD, MAT.PLANT, MAT.BUG, MAT.DRAGON, MAT.LAVA, MAT.ACID, MAT.WALL,
 ];
 
 // アプリ全体で共有する状態
 let sim;
 let renderer;
-let overlay; // 虫のドット絵レイヤー（生成に失敗しても本体は動かす）
+let overlay; // 生きもの画像レイヤー（生成に失敗しても本体は動かす）
 let selectedMaterial = MAT.SAND;
 let brushRadius = CONFIG.brush.radius;
 let paused = false;
@@ -56,14 +56,14 @@ function boot() {
     return;
   }
 
-  // 虫のドット絵レイヤーを重ねる。失敗しても本体描画は継続する（虫は素の色ブロックで見える）。
+  // 生きもの画像レイヤーを重ねる。失敗しても本体描画は継続する。
   try {
     const overlayCanvas = document.getElementById("creatures");
     sizeCanvas(overlayCanvas);
     overlay = createCreatureOverlay(overlayCanvas, cols, rows, CONFIG.render);
     overlay.resize(overlayCanvas.width, overlayCanvas.height);
   } catch (error) {
-    logger.error("虫のドット絵レイヤーの初期化に失敗しました", error);
+    logger.error("生きもの画像レイヤーの初期化に失敗しました", error);
   }
 
   buildPalette();
@@ -172,7 +172,8 @@ function togglePause(button) {
  */
 function bindPointer(canvas) {
   const paint = (event) => {
-    if (!painting) return;
+    // ドラゴンは1回の操作で1体だけ出し、ドラッグで大量発生させない。
+    if (!painting || !supportsContinuousPaint(selectedMaterial)) return;
     paintAt(event.clientX, event.clientY);
   };
 
@@ -196,14 +197,14 @@ function bindPointer(canvas) {
 function paintAt(clientX, clientY) {
   const cx = Math.floor((clientX / window.innerWidth) * sim.cols);
   const cy = Math.floor((clientY / window.innerHeight) * sim.rows);
-  forEachBrushCell(cx, cy, brushRadius, (x, y) => sim.spawn(x, y, selectedMaterial));
+  paintMaterial(sim, cx, cy, brushRadius, selectedMaterial);
 }
 
 /** 描画ループ。停止中はシミュレーションを進めず、描画だけ続ける。 */
 function loop() {
   if (!paused) sim.step();
   renderer.render(sim.grid);
-  if (overlay) overlay.render(sim.grid); // 本体の上へ虫のドット絵を重ねる
+  if (overlay) overlay.render(sim.grid, sim.facing); // ドラゴンの向きも画像へ反映する
   requestAnimationFrame(loop);
 }
 

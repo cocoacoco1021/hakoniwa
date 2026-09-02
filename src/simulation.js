@@ -19,6 +19,12 @@ const NEIGHBORS4 = [
   [1, 0],
 ];
 
+// ドラゴンの向きは横移動量と同じ符号にそろえ、移動・火炎・描画で共有する。
+export const DRAGON_FACING = Object.freeze({
+  LEFT: -1,
+  RIGHT: 1,
+});
+
 export class Simulation {
   /**
    * 入力：{ cols, rows, random, physics, creatures }
@@ -38,6 +44,7 @@ export class Simulation {
     const size = cols * rows;
     this.grid = new Uint8Array(size); // 各セルの素材ID
     this.life = new Uint16Array(size); // 火/煙/蒸気の残り寿命
+    this.facing = new Int8Array(size); // ドラゴンの向き（左=-1 / 右=1、他素材=0）
     this.moved = new Uint8Array(size); // このステップで確定済みか（二重処理防止）
     this.frame = 0; // 走査方向を交互にするためのフレーム番号
   }
@@ -68,12 +75,14 @@ export class Simulation {
     const i = this.index(x, y);
     this.grid[i] = id;
     this.life[i] = this._initialLife(id);
+    this.facing[i] = id === MAT.DRAGON ? DRAGON_FACING.LEFT : 0;
   }
 
   /** グリッド全体を空にする */
   clear() {
     this.grid.fill(MAT.EMPTY);
     this.life.fill(0);
+    this.facing.fill(0);
   }
 
   /**
@@ -117,6 +126,9 @@ export class Simulation {
           case "creature":
             this._updateBug(x, y);
             break;
+          case "dragon":
+            this._updateDragon(x, y);
+            break;
           // empty / static は何もしない（着火は火/溶岩側から作用する）
         }
       }
@@ -156,6 +168,9 @@ export class Simulation {
     const tmpLife = this.life[a];
     this.life[a] = this.life[b];
     this.life[b] = tmpLife;
+    const tmpFacing = this.facing[a];
+    this.facing[a] = this.facing[b];
+    this.facing[b] = tmpFacing;
     this.moved[a] = 1;
     this.moved[b] = 1;
   }
@@ -165,6 +180,7 @@ export class Simulation {
     const i = this.index(x, y);
     this.grid[i] = id;
     this.life[i] = this._initialLife(id);
+    this.facing[i] = id === MAT.DRAGON ? DRAGON_FACING.LEFT : 0;
     this.moved[i] = 1;
   }
 
@@ -442,9 +458,93 @@ export class Simulation {
     const energy = Math.min(this.creatures.bugMaxEnergy, this.life[from] + gain);
     this.grid[to] = MAT.BUG;
     this.life[to] = energy;
+    this.facing[to] = 0;
     this.moved[to] = 1;
     this.grid[from] = MAT.EMPTY;
     this.life[from] = 0;
+    this.facing[from] = 0;
+    this.moved[from] = 1;
+  }
+
+  // ------------------------------------------------------------------
+  // ドラゴン：大きな見た目を1セルで管理し、地上を歩いて向いている方へ火を吐く。
+  // 火・溶岩は素材定義で非可燃として扱うため、接触しても燃えない。
+  // ------------------------------------------------------------------
+
+  /**
+   * ドラゴン1体を1ステップ更新する。
+   * 入力：x, y（ドラゴンセルの座標）/ 出力：なし
+   * 空中では落下し、接地中は火炎、低確率の左右移動の順で行動する。
+   */
+  _updateDragon(x, y) {
+    const c = this.creatures;
+
+    if (this.get(x, y + 1) === MAT.EMPTY) {
+      this._moveDragon(x, y, x, y + 1);
+      return;
+    }
+
+    if (this.random() < c.dragonFireChance) {
+      this._breatheDragonFire(x, y);
+      return;
+    }
+
+    if (this.random() >= c.dragonMoveChance) return;
+    const [first, second] = this._randomSides();
+    if (this.get(x + first, y) === MAT.EMPTY) {
+      this._moveDragon(x, y, x + first, y);
+      return;
+    }
+    if (this.get(x + second, y) === MAT.EMPTY) {
+      this._moveDragon(x, y, x + second, y);
+    }
+  }
+
+  /**
+   * ドラゴンが向いている方向へ火炎を伸ばす。
+   * 入力：x, y（ドラゴンセルの座標）/ 出力：なし
+   * 空気・可燃物・虫を火へ変え、水は蒸気へ変える。不燃物で火炎を止める。
+   */
+  _breatheDragonFire(x, y) {
+    const facing = this.facing[this.index(x, y)] || DRAGON_FACING.LEFT;
+    for (let distance = 1; distance <= this.creatures.dragonFireRange; distance++) {
+      const fireX = x + facing * distance;
+      const target = this.get(fireX, y);
+      if (target === MAT.WATER) {
+        this._convert(fireX, y, MAT.STEAM);
+        return;
+      }
+      if (
+        target === MAT.EMPTY ||
+        target === MAT.FIRE ||
+        target === MAT.SMOKE ||
+        target === MAT.BUG ||
+        FLAMMABLE[target]
+      ) {
+        this._convert(fireX, y, MAT.FIRE);
+        continue;
+      }
+      return;
+    }
+  }
+
+  /**
+   * ドラゴンを空セルへ移動する。
+   * 入力：x, y（元の座標）, nx, ny（移動先）/ 出力：なし
+   * 水平移動なら進行方向へ向きを更新し、落下なら現在の向きを保つ。
+   */
+  _moveDragon(x, y, nx, ny) {
+    const from = this.index(x, y);
+    const to = this.index(nx, ny);
+    const horizontalDirection = Math.sign(nx - x);
+    const facing = horizontalDirection || this.facing[from] || DRAGON_FACING.LEFT;
+    this.grid[to] = MAT.DRAGON;
+    this.life[to] = 0;
+    this.facing[to] = facing;
+    this.moved[to] = 1;
+    this.grid[from] = MAT.EMPTY;
+    this.life[from] = 0;
+    this.facing[from] = 0;
     this.moved[from] = 1;
   }
 

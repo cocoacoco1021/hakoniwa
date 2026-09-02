@@ -43,6 +43,9 @@ export const CONFIG = {
     bugSenseRadius: 6, // 餌・危険を感知する範囲（セル）
     bugDigChance: 0.3, // 進路上の砂を掘って進む確率（粘りの表現）
     bugMoveChance: 0.65, // 徘徊で実際に1歩動く確率（せかせか感の調整）
+    dragonMoveChance: 0.08, // ドラゴンが接地中に左右へ1歩動く確率（ゆっくり歩かせる）
+    dragonFireChance: 0.006, // 左方向へ火を吐く確率（平均数秒に1回程度）
+    dragonFireRange: 4, // 火炎が届くセル数。壁や不燃素材で止まる
   },
   render: {
     background: 0x0b0d12, // 空セル（背景）の色
@@ -51,5 +54,7 @@ export const CONFIG = {
     cellJitter: 0.14, // 非発光素材の明度ゆらぎ（のっぺり感を抑える）
     bugSpriteCells: 3, // 虫のドット絵が占める画面上のセル数（1セルの個体を数セル分へ拡大表示）
     bugSpriteDark: 0x7a0f3d, // 虫のドット絵の副色（頭・脚・斑）。体色より暗い赤紫で、体上でも背景上でも視認できる
+    dragonSpriteCells: 12, // 添付画像のドラゴンを大きな1個体として表示するセル数
+    dragonBackgroundThreshold: 24, // JPEGの黒背景を透明とみなすRGB上限
   },
 };
