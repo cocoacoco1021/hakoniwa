@@ -81,7 +81,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+  border-top: 1px solid var(--panel-border);
+  background: var(--bg);
+  box-shadow: 0 -12px 28px rgba(0, 0, 0, 0.24);
 }
 
 .palette {
@@ -126,7 +128,7 @@ body {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid var(--text);
 }
 
 .toolstrip {
@@ -161,7 +163,7 @@ body {
 
 .toolstrip__btn--active {
   border-color: var(--accent);
-  color: #ecfeff;
+  color: var(--text);
   box-shadow: 0 0 0 1px var(--accent);
 }
 
@@ -177,7 +179,7 @@ body {
 
 .toolstrip__btn--sound-on {
   border-color: var(--accent);
-  color: #ecfeff;
+  color: var(--text);
   box-shadow: 0 0 0 1px var(--accent);
 }
 
@@ -228,6 +230,10 @@ body {
   height: 44px;
   margin: 0;
   accent-color: var(--accent);
+}
+
+.timeline input[type="range"]:disabled {
+  opacity: 0.38;
 }
 
 .timeline__position {
@@ -303,6 +309,46 @@ body {
 .controls__dragon-size input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .toolstrip {
+    gap: 4px;
+    overflow-x: visible;
+  }
+
+  .toolstrip__btn {
+    flex: 0 1 auto;
+    min-width: 0;
+    padding-inline: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: minmax(72px, 0.75fr) minmax(142px, 1.25fr) auto auto;
+    gap: 8px;
+    overflow-x: visible;
+  }
+
+  .controls__brush,
+  .controls__dragon-size {
+    min-width: 0;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
+  .controls__brush input[type="range"],
+  .controls__dragon-size input[type="range"] {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .controls__btn {
+    min-width: 46px;
+    padding-inline: 8px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

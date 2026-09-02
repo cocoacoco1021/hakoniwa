@@ -36,3 +36,25 @@ test("主要操作は44px以上のタッチ領域を持つ", () => {
   assert.match(css, /\.timeline__btn\s*\{[^}]*min-height:\s*44px/s);
   assert.match(css, /\.controls__btn\s*\{[^}]*min-height:\s*44px/s);
 });
+
+test("スマホ幅では補助操作と停止・消去を横スクロールなしで表示する", () => {
+  assert.match(
+    css,
+    /@media \(max-width:\s*600px\)[\s\S]*?\.toolstrip\s*\{[^}]*overflow-x:\s*visible/s
+  );
+  assert.match(
+    css,
+    /@media \(max-width:\s*600px\)[\s\S]*?\.controls\s*\{[^}]*display:\s*grid[^}]*overflow-x:\s*visible/s
+  );
+});
+
+test("操作パネルと無効な時間スライダーの優先度を見分けられる", () => {
+  assert.match(
+    css,
+    /\.toolbar\s*\{[^}]*border-top:\s*1px solid var\(--panel-border\)[^}]*background:\s*var\(--bg\)/s
+  );
+  assert.match(
+    css,
+    /\.timeline input\[type="range"\]:disabled\s*\{[^}]*opacity:\s*0\.38/s
+  );
+});
