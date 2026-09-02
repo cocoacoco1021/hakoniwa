@@ -138,7 +138,7 @@ footer{padding:40px 0 56px;color:var(--ink-2);font-size:12px}
 <header class="hero">
   <span class="eyebrow">金継ぎ ── 診断訂正の記録</span>
   <h1>遊び場を、操作盤から取り戻す。</h1><!-- h1だけ<br>を改行として許す（第3便KIN4-009: 既存configの改行入りh1が全sinkエスケープ後に生文字で刷られた。2026-08-26是正: esc は不等号の右側を素通しするので &lt;br&#62; の形にしかならず、実体参照だけを見る旧正規表現は空振りして生タグの文字列が刷られていた） -->
-  <p class="lead">前回の診断で見落とした、スマホ画面に占める操作盤の大きさを訂正した記録です。比較用コピーで前後を同条件に揃え、承認済みの実装を作業ブランチへ反映しています。</p><p class="lead" style="margin-top:.6em">公開中の環境には変更を加えていません。</p>
+  <p class="lead">前回の診断で見落とした、スマホ画面に占める操作盤の大きさを訂正した記録です。比較用コピーで前後を同条件に揃え、承認済みの実装を作業ブランチへ反映しました。</p><p class="lead" style="margin-top:.6em">診断時点では公開環境を変更せず、その後、持ち主の公開指示を受けて2026年9月3日に本番へ反映しています。</p>
   <div class="stats">
     <div class="stat-hero"><div class="k">散らかり度 <span class="kk">── デザインの散らかり具合。低いほど揃っている。30未満で合格</span></div><div class="v">22<span class="ar">→</span><b>4</b></div><div class="jg">合格圏です</div></div>
     <div class="srows"><div class="srow"><span class="sk">低コントラスト</span><span class="sv">0<small>→</small><b>0</b><small>件</small></span></div><div class="srow"><span class="sk">極小文字（12px未満）</span><span class="sv">0<small>→</small><b>0</b><small>件</small></span></div><div class="srow"><span class="sk">角丸の種類</span><span class="sv">1<small>→</small><b>1</b><small>種</small></span></div><div class="srow"><span class="sk">文字サイズの種類</span><span class="sv">3<small>→</small><b>3</b><small>種</small></span></div><div class="srow"><span class="sk">似て非なる色</span><span class="sv">5<small>→</small><b>2</b><small>組</small></span></div><div class="srow"><span class="sk">既製品らしさ（定番度）</span><span class="sv">0<small>点</small></span></div></div>
@@ -191,7 +191,7 @@ footer{padding:40px 0 56px;color:var(--ink-2);font-size:12px}
 
 手順3. 仕上げの確認（完了の条件）。幅1280・768・390の3つすべてで、散らかり度30未満・低コントラスト0件・12px未満の文字0件・角丸3種以内・横はみ出し0件・要素の重なり0件・修理前に無かった崩れ0件。CSSを貼る手順の範囲では文言とリンク先が1文字も変わっていないことも見る（マーケ診断の処方を承認のうえ実施した場合は、その変更だけが例外＝何をどう変えたかを依頼主に列挙する）。1つでも満たせないときは「完了」と言わず、その項目と理由を依頼主に報告する。</pre></div>
 </section>
-<footer>診断訂正と、承認済みの作業ブランチ実装の記録です。外部公開は行っていません。<br><small>刷った日 2026-09-02・対象 Falling Sand ローカル作業ブランチ・計測幅 1280/768/390</small></footer>
+<footer>診断訂正と、承認済みの作業ブランチ実装・本番公開の記録です。<br><small>刷った日 2026-09-02・対象 Falling Sand ローカル作業ブランチ・計測幅 1280/768/390</small></footer>
 </div>
 <script>
 (function(){
