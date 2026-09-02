@@ -7,6 +7,7 @@ import {
   DRAGON_IMAGE_DATA_URL,
   makeDarkPixelsTransparent,
 } from "./dragon-image.js";
+import { DEFAULT_GRAVITY, gravityRotation } from "./force-field.js";
 import { MAT, MATERIALS } from "./materials.js";
 import { BUG_SPRITE, spritePixels } from "./sprites.js";
 
@@ -19,8 +20,8 @@ function hexColor(value) {
  * 生きものの画像オーバーレイを生成する。
  * 入力：canvas（重ね描き用の透明キャンバス）, cols, rows（論理グリッド寸法）,
  *       options（虫・ドラゴンの表示設定）
- * 出力：{ render(grid), resize(w, h) }
- * 呼び出し側は毎フレーム、本体描画のあとに render(grid) を呼ぶ。
+ * 出力：{ render(grid, facing, gravity), resize(w, h) }
+ * 呼び出し側は毎フレーム、本体描画のあとに render を呼ぶ。
  */
 export function createCreatureOverlay(canvas, cols, rows, options) {
   return new CreatureOverlay(canvas, cols, rows, options);
@@ -28,8 +29,8 @@ export function createCreatureOverlay(canvas, cols, rows, options) {
 
 /**
  * 生きもの画像を指定位置へ描く。
- * 入力：ctx, sprite, dx/dy（左上）, width/height, facesRight（右向きならtrue）
- * 出力：なし。右向きだけ画像の中心を保ったまま左右反転する。
+ * 入力：ctx, sprite, dx/dy（左上）, width/height, facesRight, rotation
+ * 出力：なし。足元を固定し、向き反転と重力方向への回転を適用する。
  */
 export function drawCreatureSprite(
   ctx,
@@ -38,21 +39,46 @@ export function drawCreatureSprite(
   dy,
   width,
   height,
-  facesRight = false
+  facesRight = false,
+  rotation = 0
 ) {
-  if (!facesRight) {
+  if (!facesRight && rotation === 0) {
     ctx.drawImage(sprite, dx, dy, width, height);
     return;
   }
 
   ctx.save();
   try {
-    ctx.translate(dx + width, dy);
-    ctx.scale(-1, 1);
-    ctx.drawImage(sprite, 0, 0, width, height);
+    ctx.translate(dx + width / 2, dy + height);
+    ctx.rotate(rotation);
+    ctx.scale(facesRight ? -1 : 1, 1);
+    ctx.drawImage(sprite, -width / 2, -height, width, height);
   } finally {
     ctx.restore();
   }
+}
+
+/**
+ * 重力面へ足元を合わせるドラゴン画像の左上座標を返す。
+ * 入力：セル位置・セル寸法・画像寸法・重力 / 出力：{ dx, dy }。
+ */
+export function dragonSpriteOrigin(
+  cellX,
+  cellY,
+  cellWidth,
+  cellHeight,
+  spriteWidth,
+  spriteHeight,
+  gravity = DEFAULT_GRAVITY
+) {
+  const centerX = (cellX + 0.5) * cellWidth;
+  const centerY = (cellY + 0.5) * cellHeight;
+  const anchorX = centerX + gravity.dx * cellWidth * 0.5;
+  const anchorY = centerY + gravity.dy * cellHeight * 0.5;
+  return {
+    dx: anchorX - spriteWidth / 2,
+    dy: anchorY - spriteHeight,
+  };
 }
 
 class CreatureOverlay {
@@ -119,11 +145,11 @@ class CreatureOverlay {
 
   /**
    * 生きものセルを走査し、各位置へ画像を拡大描画する。
-   * 入力：grid(Uint8Array)（素材ID）, facing(Int8Array)（ドラゴンの向き）
+   * 入力：grid（素材ID）, facing（ドラゴンの向き）, gravity（重力方向）
    * 出力：なし
    * 拡大時にぼかさず（ドット絵らしく）、個体の中心へスプライトを置く。
    */
-  render(grid, facing) {
+  render(grid, facing, gravity = DEFAULT_GRAVITY) {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.width, this.height);
     ctx.imageSmoothingEnabled = false; // ドット絵をくっきり拡大する
@@ -142,13 +168,32 @@ class CreatureOverlay {
         : this.bugSpriteCells;
       const spriteW = cellW * spriteCells;
       const spriteH = cellH * spriteCells;
-      const dx = (cx + 0.5) * cellW - spriteW / 2;
-      // ドラゴンは足元を論理セルへ合わせ、地面に立って見えるよう上向きに描く。
-      const dy = id === MAT.DRAGON
-        ? (cy + 1) * cellH - spriteH
-        : (cy + 0.5) * cellH - spriteH / 2;
+      const origin = id === MAT.DRAGON
+        ? dragonSpriteOrigin(
+          cx,
+          cy,
+          cellW,
+          cellH,
+          spriteW,
+          spriteH,
+          gravity
+        )
+        : {
+          dx: (cx + 0.5) * cellW - spriteW / 2,
+          dy: (cy + 0.5) * cellH - spriteH / 2,
+        };
       const facesRight = id === MAT.DRAGON && (facing?.[i] ?? 0) > 0;
-      drawCreatureSprite(ctx, sprite, dx, dy, spriteW, spriteH, facesRight);
+      const rotation = id === MAT.DRAGON ? gravityRotation(gravity) : 0;
+      drawCreatureSprite(
+        ctx,
+        sprite,
+        origin.dx,
+        origin.dy,
+        spriteW,
+        spriteH,
+        facesRight,
+        rotation
+      );
     }
   }
 }

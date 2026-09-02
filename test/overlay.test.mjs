@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { drawCreatureSprite } from "../src/overlay.js";
+import { dragonSpriteOrigin, drawCreatureSprite } from "../src/overlay.js";
 
 /**
  * 描画APIの呼び出しを記録するテスト用コンテキストを作る。
@@ -16,6 +16,7 @@ function makeRecordingContext() {
     ctx: {
       drawImage: record("drawImage"),
       restore: record("restore"),
+      rotate: record("rotate"),
       save: record("save"),
       scale: record("scale"),
       translate: record("translate"),
@@ -40,9 +41,40 @@ test("右向きは表示位置を保ったまま画像を左右反転する", ()
 
   assert.deepEqual(calls, [
     ["save"],
-    ["translate", 16, 20],
+    ["translate", 13, 28],
+    ["rotate", 0],
     ["scale", -1, 1],
-    ["drawImage", sprite, 0, 0, 6, 8],
+    ["drawImage", sprite, -3, -8, 6, 8],
     ["restore"],
   ]);
+});
+
+test("重力回転時もドラゴンの足元を描画原点に保つ", () => {
+  const { ctx, calls } = makeRecordingContext();
+  const sprite = {};
+
+  drawCreatureSprite(ctx, sprite, 10, 20, 6, 8, false, Math.PI / 2);
+
+  assert.deepEqual(calls, [
+    ["save"],
+    ["translate", 13, 28],
+    ["rotate", Math.PI / 2],
+    ["scale", 1, 1],
+    ["drawImage", sprite, -3, -8, 6, 8],
+    ["restore"],
+  ]);
+});
+
+test("ドラゴンの足元は重力が左ならセル左端へ移る", () => {
+  const origin = dragonSpriteOrigin(
+    2,
+    3,
+    10,
+    10,
+    60,
+    60,
+    { dx: -1, dy: 0 }
+  );
+
+  assert.deepEqual(origin, { dx: -10, dy: -25 });
 });

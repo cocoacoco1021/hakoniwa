@@ -47,6 +47,23 @@ export const CONFIG = {
     dragonFireChance: 0.006, // 左方向へ火を吐く確率（平均数秒に1回程度）
     dragonFireRange: 4, // 火炎が届くセル数。壁や不燃素材で止まる
   },
+  forces: {
+    moveChance: 0.55, // 風・引力で動く素材が1ステップ移動する確率
+    attractionRadius: 24, // 引力点が届く半径（セル）
+    maxAttractors: 8, // 同時に置ける引力点。超過時は古い点から外す
+    sampleStride: 6, // 風の可視化を間引くセル間隔
+    windColor: "#a78bfa", // 風ベクトルの表示色
+    attractorColor: "#f472b6", // 引力点の表示色
+  },
+  sonification: {
+    masterGain: 0.12, // 全体音量。反応が重なっても耳を刺さない上限
+    minIntervalMs: 90, // 同種反応の最短発音間隔（密集反応は1音へ集約）
+    ignitionHz: 720, // 着火音の基準周波数
+    condensationHz: 980, // 結露音の開始周波数
+    condensationEndHz: 620, // 結露音の終端周波数
+    dissolutionFilterHz: 420, // 溶解ノイズのローパス周波数
+    noiseDuration: 0.24, // 溶解ノイズの長さ（秒）
+  },
   render: {
     background: 0x0b0d12, // 空セル（背景）の色
     glowStrength: 0.9, // 発光素材(火/溶岩)のにじみ強度（WebGL2経路のみ）

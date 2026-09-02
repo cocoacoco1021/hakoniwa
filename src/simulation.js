@@ -10,6 +10,8 @@ import {
   BEHAVIOR,
   isStatic,
 } from "./materials.js";
+import { gravityBasis } from "./force-field.js";
+import { REACTION } from "./reactions.js";
 
 // 反応で参照する上下左右の隣接オフセット（4近傍で十分かつ軽い）。
 const NEIGHBORS4 = [
@@ -19,6 +21,17 @@ const NEIGHBORS4 = [
   [1, 0],
 ];
 
+const FIELD_AFFECTED_BEHAVIORS = new Set([
+  "powder",
+  "liquid",
+  "gas",
+  "fire",
+  "lava",
+  "acid",
+  "creature",
+  "dragon",
+]);
+
 // ドラゴンの向きは横移動量と同じ符号にそろえ、移動・火炎・描画で共有する。
 export const DRAGON_FACING = Object.freeze({
   LEFT: -1,
@@ -27,19 +40,30 @@ export const DRAGON_FACING = Object.freeze({
 
 export class Simulation {
   /**
-   * 入力：{ cols, rows, random, physics, creatures }
+   * 入力：{ cols, rows, random, physics, creatures, forces, reactions }
    *   cols/rows … グリッドの列・行数
    *   random    … () => [0,1) の乱数源（省略時 Math.random）。テストで差し替え可能
    *   physics   … CONFIG.physics 相当の確率・寿命設定
    *   creatures … CONFIG.creatures 相当の生きもの設定（虫を使わないなら省略可）
    * 役割：グリッドと補助バッファを確保し、シミュレーションの状態を保持する。
    */
-  constructor({ cols, rows, random = Math.random, physics, creatures = {} }) {
+  constructor({
+    cols,
+    rows,
+    random = Math.random,
+    physics,
+    creatures = {},
+    forces = null,
+    reactions = null,
+  }) {
     this.cols = cols;
     this.rows = rows;
     this.random = random;
     this.physics = physics;
     this.creatures = creatures;
+    this.forces = forces;
+    this.reactions = reactions;
+    this.gravityFrame = gravityBasis(forces?.gravity);
 
     const size = cols * rows;
     this.grid = new Uint8Array(size); // 各セルの素材ID
@@ -88,11 +112,12 @@ export class Simulation {
   /**
    * 1ステップ進める（全セルを1回走査して更新する）。
    * 入力：なし / 出力：なし
-   * 重力を正しく解くため下の行から上へ走査し、横方向の偏りを避けるため
-   * フレームごとに左右の走査向きを交互にする。moved で二重処理を防ぐ。
+   * 走査順は固定しつつ、重力方向は各移動規則へ注入する。横方向の偏りを
+   * 避けるためフレームごとに左右を交互にし、moved で二重処理を防ぐ。
    */
   step() {
     this.moved.fill(0);
+    this.gravityFrame = gravityBasis(this.forces?.gravity);
     const leftToRight = (this.frame & 1) === 0;
 
     for (let y = this.rows - 1; y >= 0; y--) {
@@ -101,7 +126,10 @@ export class Simulation {
         const i = this.index(x, y);
         if (this.moved[i]) continue;
 
-        switch (BEHAVIOR[this.grid[i]]) {
+        const behavior = BEHAVIOR[this.grid[i]];
+        if (this._applyFieldForce(x, y, behavior)) continue;
+
+        switch (behavior) {
           case "powder":
             this._updatePowder(x, y);
             break;
@@ -184,6 +212,41 @@ export class Simulation {
     this.moved[i] = 1;
   }
 
+  /**
+   * 風・引力がある場合、動く素材を空セルへ1歩押す。
+   * 入力：セル座標とbehavior / 出力：移動した場合true。
+   */
+  _applyFieldForce(x, y, behavior) {
+    if (!this.forces || !FIELD_AFFECTED_BEHAVIORS.has(behavior)) return false;
+    const force = this.forces.vectorAt(x, y);
+    if (!force) return false;
+    if (this.random() >= this.forces.moveChance * force.strength) return false;
+
+    const candidates = [{ dx: force.dx, dy: force.dy }];
+    if (force.dx !== 0 && force.dy !== 0) {
+      const axes = this.random() < 0.5
+        ? [{ dx: force.dx, dy: 0 }, { dx: 0, dy: force.dy }]
+        : [{ dx: 0, dy: force.dy }, { dx: force.dx, dy: 0 }];
+      candidates.push(...axes);
+    }
+
+    for (const candidate of candidates) {
+      const nx = x + candidate.dx;
+      const ny = y + candidate.dy;
+      if (!this.inBounds(nx, ny)) continue;
+      const target = this.index(nx, ny);
+      if (this.moved[target] || this.grid[target] !== MAT.EMPTY) continue;
+      this._swap(x, y, nx, ny);
+      return true;
+    }
+    return false;
+  }
+
+  /** 反応を購読者へ通知する。入力：種類・座標・強度 / 出力：なし。 */
+  _emitReaction(type, x, y, intensity = 1) {
+    this.reactions?.emit(type, x, y, intensity);
+  }
+
   /** 火/煙/蒸気の初期寿命（＝虫なら初期エネルギー）を、設定のゆらぎ幅で散らして返す */
   _initialLife(id) {
     // 虫は寿命ではなくエネルギーを life に持つ。ゆらぎは付けず一定値で始める。
@@ -205,25 +268,51 @@ export class Simulation {
   /** 粉体：真下→斜め下の順に沈む。横流れはせず安息角で積もる。 */
   _updatePowder(x, y) {
     const id = this.grid[this.index(x, y)];
-    if (this._canSink(id, x, y + 1)) return this._swap(x, y, x, y + 1);
+    const { down, right } = this.gravityFrame;
+    if (this._canSink(id, x + down.dx, y + down.dy)) {
+      return this._swap(x, y, x + down.dx, y + down.dy);
+    }
 
     const [first, second] = this._randomSides();
-    if (this._canSink(id, x + first, y + 1)) return this._swap(x, y, x + first, y + 1);
-    if (this._canSink(id, x + second, y + 1)) return this._swap(x, y, x + second, y + 1);
+    const firstX = x + down.dx + right.dx * first;
+    const firstY = y + down.dy + right.dy * first;
+    if (this._canSink(id, firstX, firstY)) return this._swap(x, y, firstX, firstY);
+    const secondX = x + down.dx + right.dx * second;
+    const secondY = y + down.dy + right.dy * second;
+    if (this._canSink(id, secondX, secondY)) return this._swap(x, y, secondX, secondY);
   }
 
   /** 液体：真下→斜め下→真横の順に動く。密度差で軽い液体の上へ乗る。 */
   _updateLiquid(x, y) {
     const id = this.grid[this.index(x, y)];
-    if (this._canSink(id, x, y + 1)) return this._swap(x, y, x, y + 1);
+    const { down, right } = this.gravityFrame;
+    if (this._canSink(id, x + down.dx, y + down.dy)) {
+      return this._swap(x, y, x + down.dx, y + down.dy);
+    }
 
     const [first, second] = this._randomSides();
-    if (this._canSink(id, x + first, y + 1)) return this._swap(x, y, x + first, y + 1);
-    if (this._canSink(id, x + second, y + 1)) return this._swap(x, y, x + second, y + 1);
+    const firstDiagonalX = x + down.dx + right.dx * first;
+    const firstDiagonalY = y + down.dy + right.dy * first;
+    if (this._canSink(id, firstDiagonalX, firstDiagonalY)) {
+      return this._swap(x, y, firstDiagonalX, firstDiagonalY);
+    }
+    const secondDiagonalX = x + down.dx + right.dx * second;
+    const secondDiagonalY = y + down.dy + right.dy * second;
+    if (this._canSink(id, secondDiagonalX, secondDiagonalY)) {
+      return this._swap(x, y, secondDiagonalX, secondDiagonalY);
+    }
 
     // 横流れ：軽い（＝流れ込める）方向へ1セル移動して水平に広がる
-    if (this._canSink(id, x + first, y)) return this._swap(x, y, x + first, y);
-    if (this._canSink(id, x + second, y)) return this._swap(x, y, x + second, y);
+    const firstSideX = x + right.dx * first;
+    const firstSideY = y + right.dy * first;
+    if (this._canSink(id, firstSideX, firstSideY)) {
+      return this._swap(x, y, firstSideX, firstSideY);
+    }
+    const secondSideX = x + right.dx * second;
+    const secondSideY = y + right.dy * second;
+    if (this._canSink(id, secondSideX, secondSideY)) {
+      return this._swap(x, y, secondSideX, secondSideY);
+    }
   }
 
   /** 気体：寿命で消滅（蒸気は稀に凝結）。上→斜め上→横へ上昇・拡散する。 */
@@ -236,18 +325,38 @@ export class Simulation {
       // 蒸気は一定確率で水へ戻る（結露）。それ以外は消える。
       if (id === MAT.STEAM && this.random() < this.physics.steamCondenseChance) {
         this._convert(x, y, MAT.WATER);
+        this._emitReaction(REACTION.CONDENSATION, x, y);
       } else {
         this._convert(x, y, MAT.EMPTY);
       }
       return;
     }
 
-    if (this._canRise(id, x, y - 1)) return this._swap(x, y, x, y - 1);
+    const { up, right } = this.gravityFrame;
+    if (this._canRise(id, x + up.dx, y + up.dy)) {
+      return this._swap(x, y, x + up.dx, y + up.dy);
+    }
     const [first, second] = this._randomSides();
-    if (this._canRise(id, x + first, y - 1)) return this._swap(x, y, x + first, y - 1);
-    if (this._canRise(id, x + second, y - 1)) return this._swap(x, y, x + second, y - 1);
-    if (this._canRise(id, x + first, y)) return this._swap(x, y, x + first, y);
-    if (this._canRise(id, x + second, y)) return this._swap(x, y, x + second, y);
+    const firstDiagonalX = x + up.dx + right.dx * first;
+    const firstDiagonalY = y + up.dy + right.dy * first;
+    if (this._canRise(id, firstDiagonalX, firstDiagonalY)) {
+      return this._swap(x, y, firstDiagonalX, firstDiagonalY);
+    }
+    const secondDiagonalX = x + up.dx + right.dx * second;
+    const secondDiagonalY = y + up.dy + right.dy * second;
+    if (this._canRise(id, secondDiagonalX, secondDiagonalY)) {
+      return this._swap(x, y, secondDiagonalX, secondDiagonalY);
+    }
+    const firstSideX = x + right.dx * first;
+    const firstSideY = y + right.dy * first;
+    if (this._canRise(id, firstSideX, firstSideY)) {
+      return this._swap(x, y, firstSideX, firstSideY);
+    }
+    const secondSideX = x + right.dx * second;
+    const secondSideY = y + right.dy * second;
+    if (this._canRise(id, secondSideX, secondSideY)) {
+      return this._swap(x, y, secondSideX, secondSideY);
+    }
   }
 
   /** 火：寿命管理・可燃物への着火・水での消火を行い、気体のように上昇する。 */
@@ -269,7 +378,10 @@ export class Simulation {
       const nx = x + dx;
       const ny = y + dy;
       if (this.inBounds(nx, ny) && FLAMMABLE[this.grid[this.index(nx, ny)]]) {
-        if (this.random() < igniteChance) this._convert(nx, ny, MAT.FIRE);
+        if (this.random() < igniteChance) {
+          this._convert(nx, ny, MAT.FIRE);
+          this._emitReaction(REACTION.IGNITION, nx, ny);
+        }
       }
     }
 
@@ -281,10 +393,17 @@ export class Simulation {
     }
 
     // 上昇（気体と同じ動き）
-    if (this._canRise(MAT.FIRE, x, y - 1)) return this._swap(x, y, x, y - 1);
+    const { up, right } = this.gravityFrame;
+    if (this._canRise(MAT.FIRE, x + up.dx, y + up.dy)) {
+      return this._swap(x, y, x + up.dx, y + up.dy);
+    }
     const [first, second] = this._randomSides();
-    if (this._canRise(MAT.FIRE, x + first, y - 1)) return this._swap(x, y, x + first, y - 1);
-    if (this._canRise(MAT.FIRE, x + second, y - 1)) return this._swap(x, y, x + second, y - 1);
+    const firstX = x + up.dx + right.dx * first;
+    const firstY = y + up.dy + right.dy * first;
+    if (this._canRise(MAT.FIRE, firstX, firstY)) return this._swap(x, y, firstX, firstY);
+    const secondX = x + up.dx + right.dx * second;
+    const secondY = y + up.dy + right.dy * second;
+    if (this._canRise(MAT.FIRE, secondX, secondY)) return this._swap(x, y, secondX, secondY);
   }
 
   /** 溶岩：重い液体として流れつつ、可燃物へ着火し、水に触れると石(壁)へ固化する。 */
@@ -305,13 +424,20 @@ export class Simulation {
       const nx = x + dx;
       const ny = y + dy;
       if (this.inBounds(nx, ny) && FLAMMABLE[this.grid[this.index(nx, ny)]]) {
-        if (this.random() < igniteChance) this._convert(nx, ny, MAT.FIRE);
+        if (this.random() < igniteChance) {
+          this._convert(nx, ny, MAT.FIRE);
+          this._emitReaction(REACTION.IGNITION, nx, ny);
+        }
       }
     }
 
     // 真上が空なら稀に煙を噴く（見た目の演出）
-    if (this.get(x, y - 1) === MAT.EMPTY && this.random() < lavaSmokeChance) {
-      this._convert(x, y - 1, MAT.SMOKE);
+    const { up } = this.gravityFrame;
+    if (
+      this.get(x + up.dx, y + up.dy) === MAT.EMPTY &&
+      this.random() < lavaSmokeChance
+    ) {
+      this._convert(x + up.dx, y + up.dy, MAT.SMOKE);
     }
 
     // 粘性表現：一定確率でしか動かさない
@@ -338,6 +464,7 @@ export class Simulation {
         target === MAT.BUG;
       if (dissolvable && this.random() < acidDissolveChance) {
         this._convert(x + dx, y + dy, MAT.EMPTY);
+        this._emitReaction(REACTION.DISSOLUTION, x + dx, y + dy);
         if (this.random() < acidConsumeChance) {
           this._convert(x, y, MAT.EMPTY);
           return;
@@ -410,13 +537,16 @@ export class Simulation {
     }
 
     // 下が空なら落下する（浮かせない）。
-    if (this.get(x, y + 1) === MAT.EMPTY) return this._moveBug(x, y, x, y + 1, 0);
+    const { down, right } = this.gravityFrame;
+    if (this.get(x + down.dx, y + down.dy) === MAT.EMPTY) {
+      return this._moveBug(x, y, x + down.dx, y + down.dy, 0);
+    }
 
     // 徘徊：確率で左右どちらかへ1歩進む（空きへ、または砂を掘って）。
     if (this.random() < c.bugMoveChance) {
       const [first, second] = this._randomSides();
-      if (this._bugStep(x, y, first, 0)) return;
-      this._bugStep(x, y, second, 0);
+      if (this._bugStep(x, y, right.dx * first, right.dy * first)) return;
+      this._bugStep(x, y, right.dx * second, right.dy * second);
     }
   }
 
@@ -478,9 +608,10 @@ export class Simulation {
    */
   _updateDragon(x, y) {
     const c = this.creatures;
+    const { down, right } = this.gravityFrame;
 
-    if (this.get(x, y + 1) === MAT.EMPTY) {
-      this._moveDragon(x, y, x, y + 1);
+    if (this.get(x + down.dx, y + down.dy) === MAT.EMPTY) {
+      this._moveDragon(x, y, x + down.dx, y + down.dy);
       return;
     }
 
@@ -491,12 +622,12 @@ export class Simulation {
 
     if (this.random() >= c.dragonMoveChance) return;
     const [first, second] = this._randomSides();
-    if (this.get(x + first, y) === MAT.EMPTY) {
-      this._moveDragon(x, y, x + first, y);
+    if (this.get(x + right.dx * first, y + right.dy * first) === MAT.EMPTY) {
+      this._moveDragon(x, y, x + right.dx * first, y + right.dy * first);
       return;
     }
-    if (this.get(x + second, y) === MAT.EMPTY) {
-      this._moveDragon(x, y, x + second, y);
+    if (this.get(x + right.dx * second, y + right.dy * second) === MAT.EMPTY) {
+      this._moveDragon(x, y, x + right.dx * second, y + right.dy * second);
     }
   }
 
@@ -507,11 +638,13 @@ export class Simulation {
    */
   _breatheDragonFire(x, y) {
     const facing = this.facing[this.index(x, y)] || DRAGON_FACING.LEFT;
+    const { right } = this.gravityFrame;
     for (let distance = 1; distance <= this.creatures.dragonFireRange; distance++) {
-      const fireX = x + facing * distance;
-      const target = this.get(fireX, y);
+      const fireX = x + right.dx * facing * distance;
+      const fireY = y + right.dy * facing * distance;
+      const target = this.get(fireX, fireY);
       if (target === MAT.WATER) {
-        this._convert(fireX, y, MAT.STEAM);
+        this._convert(fireX, fireY, MAT.STEAM);
         return;
       }
       if (
@@ -521,7 +654,10 @@ export class Simulation {
         target === MAT.BUG ||
         FLAMMABLE[target]
       ) {
-        this._convert(fireX, y, MAT.FIRE);
+        this._convert(fireX, fireY, MAT.FIRE);
+        if (target === MAT.BUG || FLAMMABLE[target]) {
+          this._emitReaction(REACTION.IGNITION, fireX, fireY);
+        }
         continue;
       }
       return;
@@ -536,8 +672,9 @@ export class Simulation {
   _moveDragon(x, y, nx, ny) {
     const from = this.index(x, y);
     const to = this.index(nx, ny);
-    const horizontalDirection = Math.sign(nx - x);
-    const facing = horizontalDirection || this.facing[from] || DRAGON_FACING.LEFT;
+    const { right } = this.gravityFrame;
+    const tangentDirection = Math.sign((nx - x) * right.dx + (ny - y) * right.dy);
+    const facing = tangentDirection || this.facing[from] || DRAGON_FACING.LEFT;
     this.grid[to] = MAT.DRAGON;
     this.life[to] = 0;
     this.facing[to] = facing;

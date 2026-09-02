@@ -36,7 +36,7 @@ export const MAT = {
 //   acid   : 酸（液体＋可溶物を溶かす）
 //   plant  : 植物（静止＋水へ成長。可燃）
 //   creature: 生きもの（虫）。意思を持って動く個体。採餌・繁殖・逃避・餓死する
-//   dragon: ドラゴン。地上をゆっくり移動し、ときどき左方向へ火を吐く
+//   dragon: ドラゴン。重力面を歩き、向いている方向へ火を吐く
 export const MATERIALS = [
   { id: MAT.EMPTY, key: "empty", label: "消しゴム", behavior: "empty", density: 1, color: 0x0b0d12, emissive: 0, flammable: false },
   { id: MAT.WALL, key: "wall", label: "壁", behavior: "static", density: Infinity, color: 0x6b7280, emissive: 0, flammable: false },
