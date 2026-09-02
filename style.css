@@ -186,6 +186,58 @@ body {
   opacity: 0.55;
 }
 
+.timeline {
+  display: grid;
+  grid-template-columns: auto minmax(120px, 1fr) 52px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.timeline__btn {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, transform 0.09s;
+}
+
+.timeline__btn:active {
+  transform: scale(0.96);
+}
+
+.timeline__btn--active {
+  border-color: var(--accent);
+  color: #ecfeff;
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.timeline__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.timeline input[type="range"] {
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.timeline__position {
+  color: var(--text-dim);
+  font-family: "Avenir Next", "Hiragino Sans", sans-serif;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 .controls {
   display: flex;
   align-items: center;
@@ -229,6 +281,8 @@ body {
 
 .palette__item:focus-visible,
 .toolstrip__btn:focus-visible,
+.timeline__btn:focus-visible,
+.timeline input:focus-visible,
 .controls__btn:focus-visible,
 .controls__brush input:focus-visible {
   outline: 2px solid var(--accent);
@@ -238,6 +292,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .palette__item,
   .toolstrip__btn,
+  .timeline__btn,
   .controls__btn {
     transition: none;
   }

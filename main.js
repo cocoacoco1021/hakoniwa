@@ -11,7 +11,9 @@ import { paintMaterial, supportsContinuousPaint } from "./src/painting.js";
 import { FIELD_TOOL, ForceField, gravityArrow } from "./src/force-field.js";
 import { createForceOverlay } from "./src/force-overlay.js";
 import { ReactionBus } from "./src/reactions.js";
+import { createRandom } from "./src/random.js";
 import { createSonifier } from "./src/sonification.js";
+import { WorldTimeline } from "./src/timeline.js";
 
 // 通常フローで console.log は使わない方針。エラー記録だけ軽量ロガーに集約する。
 const logger = {
@@ -31,12 +33,17 @@ let overlay; // 生きもの画像レイヤー（生成に失敗しても本体�
 let forceOverlay; // 力場表示レイヤー（失敗しても物理効果は維持する）
 let forceField;
 let sonifier;
+let randomSource;
+let timeline;
 let selectedMaterial = MAT.SAND;
 let selectedTool = FIELD_TOOL.MATERIAL;
 let brushRadius = CONFIG.brush.radius;
 let paused = false;
 let painting = false;
+let timelineGestureActive = false;
 let previousPointerCell = null;
+let replayingHistory = false;
+let lastReplayAtMs = 0;
 let paletteButtons = [];
 let fieldToolButtons = [];
 
@@ -56,6 +63,7 @@ function boot() {
   sizeCanvas(canvas);
 
   const { cols, rows } = computeGrid(window.innerWidth, window.innerHeight, CONFIG.grid);
+  randomSource = createRandom(CONFIG.timeline.seed);
   forceField = new ForceField(cols, rows, CONFIG.forces);
   const reactionBus = new ReactionBus();
   sonifier = createSonifier({ ...CONFIG.sonification, cols });
@@ -63,12 +71,20 @@ function boot() {
   sim = new Simulation({
     cols,
     rows,
-    random: Math.random,
+    random: randomSource,
     physics: CONFIG.physics,
     creatures: CONFIG.creatures,
     forces: forceField,
     reactions: reactionBus,
   });
+  timeline = new WorldTimeline({
+    simulation: sim,
+    random: randomSource,
+    forceField,
+    maxSnapshots: CONFIG.timeline.maxSnapshots,
+    captureIntervalSteps: CONFIG.timeline.captureIntervalSteps,
+  });
+  timeline.captureNow();
 
   try {
     renderer = createRenderer(canvas, cols, rows, CONFIG.render);
@@ -100,6 +116,7 @@ function boot() {
 
   buildPalette();
   bindFieldControls();
+  bindTimelineControls();
   bindControls();
   bindPointer(canvas);
   requestAnimationFrame(loop);
@@ -164,8 +181,7 @@ function bindFieldControls() {
 
   const gravityButton = document.getElementById("rotate-gravity");
   gravityButton.addEventListener("click", () => {
-    const gravity = forceField.rotateGravity();
-    gravityButton.textContent = `重力 ${gravityArrow(gravity)}`;
+    commitTimelineMutation(() => forceField.rotateGravity());
   });
 
   const soundButton = document.getElementById("toggle-sound");
@@ -183,7 +199,7 @@ function bindFieldControls() {
   });
 
   document.getElementById("clear-fields").addEventListener("click", () => {
-    forceField.clear();
+    commitTimelineMutation(() => forceField.clear());
   });
 }
 
@@ -197,6 +213,111 @@ function selectTool(tool) {
   }
   const hint = document.getElementById("mode-hint");
   if (hint) hint.textContent = TOOL_HINTS[tool];
+}
+
+/**
+ * 時間スライダーと履歴再生ボタンを登録する。
+ * 入力：なし / 出力：なし。
+ */
+function bindTimelineControls() {
+  const scrubber = document.getElementById("time-scrubber");
+  scrubber.addEventListener("input", () => {
+    stopHistoryReplay();
+    setPaused(true);
+    timeline.seek(Number(scrubber.value));
+    sonifier.discardPending();
+    syncTimelineControls();
+  });
+
+  document.getElementById("replay-history").addEventListener("click", () => {
+    if (replayingHistory) {
+      stopHistoryReplay();
+      syncTimelineControls();
+      return;
+    }
+    startHistoryReplay();
+  });
+  syncTimelineControls();
+}
+
+/** 履歴の現在位置・相対秒・再生状態をUIへ反映する。 */
+function syncTimelineControls() {
+  const scrubber = document.getElementById("time-scrubber");
+  const replayButton = document.getElementById("replay-history");
+  const position = document.getElementById("timeline-position");
+  if (!scrubber || !replayButton || !position || timeline.size === 0) return;
+
+  scrubber.max = String(Math.max(0, timeline.size - 1));
+  scrubber.value = String(Math.max(0, timeline.cursor));
+  scrubber.disabled = timeline.size < 2;
+  replayButton.disabled = timeline.size < 2;
+  replayButton.textContent = replayingHistory ? "履歴停止" : "履歴再生";
+  replayButton.setAttribute("aria-pressed", String(replayingHistory));
+  replayButton.classList.toggle("timeline__btn--active", replayingHistory);
+
+  const current = timeline.getSnapshot(timeline.cursor);
+  const latest = timeline.getSnapshot(timeline.size - 1);
+  const framesBehind = Math.max(0, latest.frame - current.frame);
+  const secondsBehind = framesBehind / CONFIG.timeline.stepsPerSecond;
+  const positionsBehind = timeline.size - 1 - timeline.cursor;
+  const positionLabel = timeline.isLatest()
+    ? "いま"
+    : framesBehind > 0
+      ? `-${secondsBehind.toFixed(1)}秒`
+      : `${positionsBehind}手前`;
+  position.textContent = positionLabel;
+  scrubber.setAttribute("aria-valuetext", positionLabel);
+
+  const gravityButton = document.getElementById("rotate-gravity");
+  if (gravityButton) gravityButton.textContent = `重力 ${gravityArrow(forceField.gravity)}`;
+}
+
+/** 最新なら先頭へ、過去なら現在位置から履歴再生を始める。 */
+function startHistoryReplay() {
+  if (timeline.size < 2) return;
+  setPaused(true);
+  if (timeline.isLatest()) timeline.seek(0);
+  replayingHistory = timeline.cursor < timeline.size - 1;
+  lastReplayAtMs = performance.now();
+  sonifier.discardPending();
+  syncTimelineControls();
+}
+
+/** 履歴再生を止める。世界状態とカーソルは現在位置に保つ。 */
+function stopHistoryReplay() {
+  replayingHistory = false;
+  lastReplayAtMs = 0;
+}
+
+/** 再生間隔を満たしたら履歴を1状態だけ進める。 */
+function updateHistoryReplay(nowMs) {
+  if (!replayingHistory) return;
+  if (nowMs - lastReplayAtMs < CONFIG.timeline.replayIntervalMs) return;
+  lastReplayAtMs = nowMs;
+  timeline.advance();
+  if (timeline.isLatest()) stopHistoryReplay();
+  syncTimelineControls();
+}
+
+/** 過去の未来を破棄し、次の入力を新しい分岐にする準備を行う。 */
+function prepareTimelineMutation() {
+  stopHistoryReplay();
+  timeline.branch();
+  sonifier.discardPending();
+}
+
+/** 現在の入力結果を新規履歴または最新履歴の置換として保存する。 */
+function recordTimelineMutation(replaceLatest = false) {
+  if (replaceLatest) timeline.replaceLatest();
+  else timeline.captureNow();
+  syncTimelineControls();
+}
+
+/** 単発操作を分岐可能な履歴として実行・保存する。 */
+function commitTimelineMutation(mutation) {
+  prepareTimelineMutation();
+  mutation();
+  recordTimelineMutation();
 }
 
 /** 0xRRGGBB を CSS の #rrggbb 文字列へ変換する */
@@ -218,16 +339,20 @@ function bindControls() {
   });
 
   const pauseButton = document.getElementById("toggle-pause");
-  pauseButton.addEventListener("click", () => togglePause(pauseButton));
+  pauseButton.addEventListener("click", () => togglePause());
 
-  document.getElementById("clear").addEventListener("click", () => sim.clear());
+  document.getElementById("clear").addEventListener("click", () => {
+    commitTimelineMutation(() => sim.clear());
+  });
 
   window.addEventListener("keydown", (event) => {
     if (event.key === " ") {
       event.preventDefault();
-      togglePause(pauseButton);
+      togglePause();
     }
-    if (event.key.toLowerCase() === "c") sim.clear();
+    if (event.key.toLowerCase() === "c") {
+      commitTimelineMutation(() => sim.clear());
+    }
   });
 
   window.addEventListener("resize", () => {
@@ -243,11 +368,24 @@ function bindControls() {
   });
 }
 
-/** 一時停止のオン/オフを切り替え、ボタン表示を更新する */
-function togglePause(button) {
-  paused = !paused;
+/** 一時停止状態を設定し、ボタン表示を更新する。 */
+function setPaused(nextPaused) {
+  paused = nextPaused;
+  const button = document.getElementById("toggle-pause");
   button.textContent = paused ? "再生" : "停止";
   button.setAttribute("aria-pressed", String(paused));
+}
+
+/** 一時停止を切り替える。過去から再開するときは未来を破棄して分岐する。 */
+function togglePause() {
+  if (paused) {
+    stopHistoryReplay();
+    timeline.branch();
+    setPaused(false);
+  } else {
+    setPaused(true);
+  }
+  syncTimelineControls();
 }
 
 /**
@@ -258,19 +396,33 @@ function togglePause(button) {
 function bindPointer(canvas) {
   canvas.addEventListener("pointerdown", (event) => {
     painting = true;
+    timelineGestureActive = false;
     canvas.setPointerCapture(event.pointerId);
     const cell = cellAt(event.clientX, event.clientY);
     previousPointerCell = cell;
-    applyToolStart(cell);
+    if (toolMutatesOnStart()) {
+      prepareTimelineMutation();
+      if (applyToolStart(cell)) {
+        recordTimelineMutation();
+        timelineGestureActive = true;
+      }
+    }
   });
   canvas.addEventListener("pointermove", (event) => {
     if (!painting) return;
     const cell = cellAt(event.clientX, event.clientY);
-    applyToolMove(previousPointerCell, cell);
+    if (toolMutatesOnMove(previousPointerCell, cell)) {
+      if (!timelineGestureActive) prepareTimelineMutation();
+      if (applyToolMove(previousPointerCell, cell)) {
+        recordTimelineMutation(timelineGestureActive);
+        timelineGestureActive = true;
+      }
+    }
     previousPointerCell = cell;
   });
   const stopPainting = () => {
     painting = false;
+    timelineGestureActive = false;
     previousPointerCell = null;
   };
   canvas.addEventListener("pointerup", stopPainting);
@@ -278,6 +430,22 @@ function bindPointer(canvas) {
   // タッチで描くときに画面がスクロールしないようにする
   canvas.addEventListener("touchstart", (event) => event.preventDefault(), { passive: false });
   canvas.addEventListener("touchmove", (event) => event.preventDefault(), { passive: false });
+}
+
+/** 選択ツールが押下直後に世界を変更するかを返す。 */
+function toolMutatesOnStart() {
+  return selectedTool !== FIELD_TOOL.WIND;
+}
+
+/** 選択ツールが今回のドラッグ移動で世界を変更するかを返す。 */
+function toolMutatesOnMove(previousCell, cell) {
+  if (selectedTool === FIELD_TOOL.MATERIAL) {
+    return supportsContinuousPaint(selectedMaterial);
+  }
+  if (selectedTool === FIELD_TOOL.WIND) {
+    return previousCell.x !== cell.x || previousCell.y !== cell.y;
+  }
+  return selectedTool === FIELD_TOOL.ERASER;
 }
 
 /** 画面座標を論理セル座標へ変換する。 */
@@ -294,22 +462,27 @@ function cellAt(clientX, clientY) {
   };
 }
 
-/** 押し始めの1回だけ必要なツール操作を適用する。 */
+/** 押し始めの1回だけ必要なツール操作を適用し、変更の有無を返す。 */
 function applyToolStart(cell) {
   if (selectedTool === FIELD_TOOL.MATERIAL) {
     paintMaterial(sim, cell.x, cell.y, brushRadius, selectedMaterial);
+    return true;
   } else if (selectedTool === FIELD_TOOL.ATTRACTOR) {
     forceField.addAttractor(cell.x, cell.y);
+    return true;
   } else if (selectedTool === FIELD_TOOL.ERASER) {
     forceField.erase(cell.x, cell.y, brushRadius);
+    return true;
   }
+  return false;
 }
 
-/** ドラッグ中の素材・風・場消し操作を適用する。 */
+/** ドラッグ中の素材・風・場消し操作を適用し、変更の有無を返す。 */
 function applyToolMove(previousCell, cell) {
   if (selectedTool === FIELD_TOOL.MATERIAL) {
     if (supportsContinuousPaint(selectedMaterial)) {
       paintMaterial(sim, cell.x, cell.y, brushRadius, selectedMaterial);
+      return true;
     }
   } else if (selectedTool === FIELD_TOOL.WIND) {
     forceField.paintWindSegment(
@@ -319,16 +492,24 @@ function applyToolMove(previousCell, cell) {
       cell.y,
       brushRadius
     );
+    return true;
   } else if (selectedTool === FIELD_TOOL.ERASER) {
     forceField.erase(cell.x, cell.y, brushRadius);
+    return true;
   }
+  return false;
 }
 
 /** 描画ループ。停止中はシミュレーションを進めず、描画だけ続ける。 */
 function loop() {
-  if (!paused) sim.step();
-  renderer.render(sim.grid);
   const nowMs = performance.now();
+  if (replayingHistory) {
+    updateHistoryReplay(nowMs);
+  } else if (!paused) {
+    sim.step();
+    if (timeline.captureIfDue()) syncTimelineControls();
+  }
+  renderer.render(sim.grid);
   if (forceOverlay) forceOverlay.render(forceField, nowMs);
   if (overlay) overlay.render(sim.grid, sim.facing, forceField.gravity);
   sonifier.flush(nowMs);

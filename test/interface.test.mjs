@@ -15,8 +15,15 @@ test("音・重力・風・引力・場消しの操作入口を表示する", ()
   assert.match(html, /<canvas id="fields"><\/canvas>/);
 });
 
+test("巻き戻しスライダーと履歴再生ボタンを表示する", () => {
+  assert.match(html, /id="time-scrubber"/);
+  assert.match(html, /id="replay-history"[^>]*>履歴再生/);
+  assert.match(html, /id="timeline-position"[^>]*>いま/);
+});
+
 test("主要操作ボタンは44px以上のタッチ領域を持つ", () => {
   assert.match(css, /\.palette__item\s*\{[^}]*min-height:\s*44px/s);
   assert.match(css, /\.toolstrip__btn\s*\{[^}]*min-height:\s*44px/s);
+  assert.match(css, /\.timeline__btn\s*\{[^}]*min-height:\s*44px/s);
   assert.match(css, /\.controls__btn\s*\{[^}]*min-height:\s*44px/s);
 });

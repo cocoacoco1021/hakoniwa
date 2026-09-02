@@ -33,6 +33,11 @@
       <button type="button" id="toggle-sound" class="toolstrip__btn" aria-pressed="false">音 OFF</button>
       <button type="button" id="clear-fields" class="toolstrip__btn">力場消去</button>
     </div>
+    <div class="timeline" aria-label="時間操作">
+      <button type="button" id="replay-history" class="timeline__btn" aria-pressed="false">履歴再生</button>
+      <input type="range" id="time-scrubber" min="0" max="0" value="0" disabled aria-label="時間を巻き戻す" />
+      <output id="timeline-position" class="timeline__position" for="time-scrubber">いま</output>
+    </div>
     <div class="controls">
       <label class="controls__brush">
         筆

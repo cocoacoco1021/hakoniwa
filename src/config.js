@@ -64,6 +64,13 @@ export const CONFIG = {
     dissolutionFilterHz: 420, // 溶解ノイズのローパス周波数
     noiseDuration: 0.24, // 溶解ノイズの長さ（秒）
   },
+  timeline: {
+    seed: 0x5eed1234, // 同じ操作から同じ未来を作る決定的PRNGの初期種
+    maxSnapshots: 90, // 最大盤面でも約26MB以内に収める履歴上限
+    captureIntervalSteps: 8, // 物理8ステップごとに状態を記録する
+    replayIntervalMs: 120, // 履歴再生で次の状態へ進む間隔
+    stepsPerSecond: 60, // スクラバーの相対秒表示に使う基準ステップ数
+  },
   render: {
     background: 0x0b0d12, // 空セル（背景）の色
     glowStrength: 0.9, // 発光素材(火/溶岩)のにじみ強度（WebGL2経路のみ）

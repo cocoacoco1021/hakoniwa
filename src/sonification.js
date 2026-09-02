@@ -49,6 +49,11 @@ export function createSonifier(options = {}) {
       });
     },
 
+    /** 巻き戻し前の未再生イベントを破棄する。入力：なし / 出力：なし */
+    discardPending() {
+      pending.clear();
+    },
+
     /** 発音間隔を満たした反応だけ再生する。入力：現在時刻(ms) / 出力：発音数 */
     flush(nowMs) {
       if (!enabled || !engine) return 0;

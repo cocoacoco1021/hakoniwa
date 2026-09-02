@@ -60,3 +60,16 @@ test("無効化すると保留中の反応を破棄して音響エンジンを�
   assert.equal(sonifier.flush(1000), 0);
   assert.deepEqual(calls.at(-1), ["suspend"]);
 });
+
+test("巻き戻し時は有効状態を保ったまま保留音だけ破棄する", async () => {
+  const { calls, engine } = makeEngine();
+  const sonifier = createSonifier({ createEngine: () => engine });
+  await sonifier.setEnabled(true);
+  sonifier.enqueue({ type: REACTION.IGNITION, x: 0, y: 0 });
+
+  sonifier.discardPending();
+
+  assert.equal(sonifier.enabled, true);
+  assert.equal(sonifier.flush(100), 0);
+  assert.deepEqual(calls, [["resume"]]);
+});
