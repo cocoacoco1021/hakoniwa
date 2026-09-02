@@ -79,6 +79,8 @@ export const CONFIG = {
     bugSpriteCells: 3, // 虫のドット絵が占める画面上のセル数（1セルの個体を数セル分へ拡大表示）
     bugSpriteDark: 0x7a0f3d, // 虫のドット絵の副色（頭・脚・斑）。体色より暗い赤紫で、体上でも背景上でも視認できる
     dragonSpriteCells: 12, // 添付画像のドラゴンを大きな1個体として表示するセル数
+    dragonSpriteMinCells: 4, // 画面スライダーで選べる最小表示サイズ
+    dragonSpriteMaxCells: 24, // 盤面を覆いすぎない最大表示サイズ
     dragonBackgroundThreshold: 24, // JPEGの黒背景を透明とみなすRGB上限
   },
 };

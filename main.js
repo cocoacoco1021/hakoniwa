@@ -338,6 +338,25 @@ function bindControls() {
     brushRadius = Number(slider.value);
   });
 
+  const dragonSizeSlider = document.getElementById("dragon-size");
+  const dragonSizeValue = document.getElementById("dragon-size-value");
+  dragonSizeSlider.min = String(CONFIG.render.dragonSpriteMinCells);
+  dragonSizeSlider.max = String(CONFIG.render.dragonSpriteMaxCells);
+  dragonSizeSlider.step = "1";
+  dragonSizeSlider.value = String(CONFIG.render.dragonSpriteCells);
+  if (overlay) {
+    dragonSizeValue.textContent = String(
+      overlay.setDragonSpriteCells(dragonSizeSlider.value)
+    );
+    dragonSizeSlider.addEventListener("input", () => {
+      dragonSizeValue.textContent = String(
+        overlay.setDragonSpriteCells(dragonSizeSlider.value)
+      );
+    });
+  } else {
+    dragonSizeSlider.disabled = true;
+  }
+
   const pauseButton = document.getElementById("toggle-pause");
   pauseButton.addEventListener("click", () => togglePause());
 

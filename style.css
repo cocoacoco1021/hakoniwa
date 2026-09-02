@@ -250,7 +250,8 @@ body {
   display: none;
 }
 
-.controls__brush {
+.controls__brush,
+.controls__dragon-size {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -259,9 +260,23 @@ body {
   flex: 0 0 auto;
 }
 
-.controls__brush input[type="range"] {
+.controls__brush input[type="range"],
+.controls__dragon-size input[type="range"] {
   width: 120px;
+  min-height: 44px;
   accent-color: var(--accent);
+}
+
+.controls__dragon-size input[type="range"] {
+  width: 100px;
+}
+
+.controls__dragon-size output {
+  min-width: 2ch;
+  color: var(--text);
+  font-family: "Avenir Next", "Hiragino Sans", sans-serif;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .controls__btn {
@@ -284,7 +299,8 @@ body {
 .timeline__btn:focus-visible,
 .timeline input:focus-visible,
 .controls__btn:focus-visible,
-.controls__brush input:focus-visible {
+.controls__brush input:focus-visible,
+.controls__dragon-size input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }

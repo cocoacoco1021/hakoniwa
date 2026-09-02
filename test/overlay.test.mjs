@@ -2,7 +2,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { dragonSpriteOrigin, drawCreatureSprite } from "../src/overlay.js";
+import {
+  dragonSpriteOrigin,
+  drawCreatureSprite,
+  normalizeDragonSpriteCells,
+} from "../src/overlay.js";
 
 /**
  * 描画APIの呼び出しを記録するテスト用コンテキストを作る。
@@ -77,4 +81,11 @@ test("ドラゴンの足元は重力が左ならセル左端へ移る", () => {
   );
 
   assert.deepEqual(origin, { dx: -10, dy: -25 });
+});
+
+test("ドラゴン表示サイズは整数化され最小・最大範囲に収まる", () => {
+  assert.equal(normalizeDragonSpriteCells(3, 4, 24), 4);
+  assert.equal(normalizeDragonSpriteCells(12.6, 4, 24), 13);
+  assert.equal(normalizeDragonSpriteCells(30, 4, 24), 24);
+  assert.equal(normalizeDragonSpriteCells("不正", 4, 24, 12), 12);
 });
