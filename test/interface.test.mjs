@@ -15,18 +15,32 @@ test("音・重力・風・引力・場消しの操作入口を表示する", ()
   assert.match(html, /<canvas id="fields"><\/canvas>/);
 });
 
-test("巻き戻しスライダーと履歴再生ボタンを表示する", () => {
+test("履歴ができるまで巻き戻し操作を隠す", () => {
+  assert.match(html, /class="timeline" id="timeline-controls"[^>]*hidden/);
   assert.match(html, /id="time-scrubber"/);
   assert.match(html, /id="replay-history"[^>]*>履歴再生/);
   assert.match(html, /id="timeline-position"[^>]*>いま/);
 });
 
-test("ドラゴン表示サイズのスライダーと現在値を表示する", () => {
+test("ドラゴン選択時だけ使うサイズ調整を初期状態では隠す", () => {
+  assert.match(html, /id="dragon-size-control" hidden/);
   assert.match(html, /id="dragon-size"[^>]*aria-label="ドラゴンの表示サイズ"/);
   assert.match(html, /id="dragon-size-value"/);
 });
 
+test("操作パネルは選択中の素材を残して開閉できる", () => {
+  assert.match(html, /id="toggle-toolbar"[^>]*aria-expanded="false"[^>]*aria-controls="toolbar-content"/);
+  assert.match(html, /id="toolbar-selection-label"[^>]*>選択: 砂/);
+  assert.match(html, /id="toolbar-content" hidden/);
+});
+
+test("筆サイズは用途と現在値を表示する", () => {
+  assert.match(html, /<span>筆サイズ<\/span>/);
+  assert.match(html, /id="brush-size-value"/);
+});
+
 test("主要操作は44px以上のタッチ領域を持つ", () => {
+  assert.match(css, /\.toolbar__toggle\s*\{[^}]*min-height:\s*44px/s);
   assert.match(css, /\.palette__item\s*\{[^}]*min-height:\s*44px/s);
   assert.match(css, /\.toolstrip__btn\s*\{[^}]*min-height:\s*44px/s);
   assert.match(
@@ -37,14 +51,14 @@ test("主要操作は44px以上のタッチ領域を持つ", () => {
   assert.match(css, /\.controls__btn\s*\{[^}]*min-height:\s*44px/s);
 });
 
-test("スマホ幅では補助操作と停止・消去を横スクロールなしで表示する", () => {
+test("スマホ幅では開いた操作と停止・消去を横スクロールなしで配置する", () => {
   assert.match(
     css,
     /@media \(max-width:\s*600px\)[\s\S]*?\.toolstrip\s*\{[^}]*overflow-x:\s*visible/s
   );
   assert.match(
     css,
-    /@media \(max-width:\s*600px\)[\s\S]*?\.controls\s*\{[^}]*display:\s*grid[^}]*overflow-x:\s*visible/s
+    /@media \(max-width:\s*600px\)[\s\S]*?\.controls\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto auto[^}]*overflow-x:\s*visible/s
   );
 });
 

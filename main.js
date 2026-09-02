@@ -14,6 +14,7 @@ import { ReactionBus } from "./src/reactions.js";
 import { createRandom } from "./src/random.js";
 import { createSonifier } from "./src/sonification.js";
 import { WorldTimeline } from "./src/timeline.js";
+import { createToolbarDisclosure, getToolbarVisibility } from "./src/toolbar.js";
 
 // 通常フローで console.log は使わない方針。エラー記録だけ軽量ロガーに集約する。
 const logger = {
@@ -114,6 +115,7 @@ function boot() {
     logger.error("生きもの画像レイヤーの初期化に失敗しました", error);
   }
 
+  bindToolbarDisclosure();
   buildPalette();
   bindFieldControls();
   bindTimelineControls();
@@ -213,6 +215,61 @@ function selectTool(tool) {
   }
   const hint = document.getElementById("mode-hint");
   if (hint) hint.textContent = TOOL_HINTS[tool];
+  syncToolbarContext();
+}
+
+/**
+ * 下部操作パネルの開閉を登録する。
+ * 入力：なし / 出力：なし。
+ */
+function bindToolbarDisclosure() {
+  createToolbarDisclosure({
+    toggleButton: document.getElementById("toggle-toolbar"),
+    toggleLabel: document.getElementById("toolbar-toggle-label"),
+    chevron: document.getElementById("toolbar-chevron"),
+    content: document.getElementById("toolbar-content"),
+  });
+}
+
+/**
+ * 選択中の道具を要約し、関係するスライダーだけを表示する。
+ * 入力：なし / 出力：なし。
+ */
+function syncToolbarContext() {
+  const brushControl = document.getElementById("brush-size-control");
+  const dragonControl = document.getElementById("dragon-size-control");
+  const timelineControls = document.getElementById("timeline-controls");
+  const selectionLabel = document.getElementById("toolbar-selection-label");
+  const selectionSwatch = document.getElementById("toolbar-selection-swatch");
+  if (!brushControl || !dragonControl || !timelineControls || !selectionLabel) return;
+
+  const visibility = getToolbarVisibility(
+    selectedTool,
+    selectedMaterial,
+    timeline?.size ?? 0
+  );
+  brushControl.hidden = !visibility.showBrushSize;
+  dragonControl.hidden = !visibility.showDragonSize;
+  timelineControls.hidden = !visibility.showTimeline;
+
+  if (selectedTool === FIELD_TOOL.MATERIAL) {
+    const material = MATERIALS[selectedMaterial];
+    selectionLabel.textContent = `選択: ${material.label}`;
+    if (selectionSwatch) {
+      selectionSwatch.style.background =
+        selectedMaterial === MAT.EMPTY ? "transparent" : hexColor(material.color);
+    }
+    return;
+  }
+
+  const toolSummary = {
+    [FIELD_TOOL.WIND]: ["風", "var(--wind)"],
+    [FIELD_TOOL.ATTRACTOR]: ["引力", "var(--attractor)"],
+    [FIELD_TOOL.ERASER]: ["場消し", "transparent"],
+  }[selectedTool];
+  if (!toolSummary) return;
+  selectionLabel.textContent = `選択: ${toolSummary[0]}`;
+  if (selectionSwatch) selectionSwatch.style.background = toolSummary[1];
 }
 
 /**
@@ -270,6 +327,7 @@ function syncTimelineControls() {
 
   const gravityButton = document.getElementById("rotate-gravity");
   if (gravityButton) gravityButton.textContent = `重力 ${gravityArrow(forceField.gravity)}`;
+  syncToolbarContext();
 }
 
 /** 最新なら先頭へ、過去なら現在位置から履歴再生を始める。 */
@@ -331,11 +389,14 @@ function hexColor(value) {
  */
 function bindControls() {
   const slider = document.getElementById("brush-size");
+  const brushSizeValue = document.getElementById("brush-size-value");
   slider.min = String(CONFIG.brush.minRadius);
   slider.max = String(CONFIG.brush.maxRadius);
   slider.value = String(brushRadius);
+  brushSizeValue.textContent = String(brushRadius);
   slider.addEventListener("input", () => {
     brushRadius = Number(slider.value);
+    brushSizeValue.textContent = String(brushRadius);
   });
 
   const dragonSizeSlider = document.getElementById("dragon-size");

@@ -15,6 +15,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   margin: 0;
@@ -77,13 +81,60 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0));
+  padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0));
   display: flex;
   flex-direction: column;
   gap: 8px;
   border-top: 1px solid var(--panel-border);
   background: var(--bg);
   box-shadow: 0 -12px 28px rgba(0, 0, 0, 0.24);
+}
+
+.toolbar__toggle {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.toolbar__selection {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.toolbar__selection-swatch {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  border: 1px solid var(--text);
+  border-radius: 50%;
+  background: #d8c36a;
+}
+
+.toolbar__toggle-label {
+  color: var(--text-dim);
+}
+
+.toolbar__chevron {
+  color: var(--accent);
+}
+
+.toolbar__content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .palette {
@@ -190,10 +241,15 @@ body {
 
 .timeline {
   display: grid;
-  grid-template-columns: auto minmax(120px, 1fr) 52px;
+  grid-template-columns: auto auto minmax(120px, 1fr) 52px;
   align-items: center;
   gap: 8px;
   min-width: 0;
+}
+
+.timeline__label {
+  color: var(--text-dim);
+  font-size: 13px;
 }
 
 .timeline__btn {
@@ -258,7 +314,8 @@ body {
 
 .controls__brush,
 .controls__dragon-size {
-  display: inline-flex;
+  display: inline-grid;
+  grid-template-columns: auto minmax(80px, 120px) 3ch;
   align-items: center;
   gap: 8px;
   font-size: 13px;
@@ -277,6 +334,7 @@ body {
   width: 100px;
 }
 
+.controls__brush output,
 .controls__dragon-size output {
   min-width: 2ch;
   color: var(--text);
@@ -301,6 +359,7 @@ body {
 }
 
 .palette__item:focus-visible,
+.toolbar__toggle:focus-visible,
 .toolstrip__btn:focus-visible,
 .timeline__btn:focus-visible,
 .timeline input:focus-visible,
@@ -327,16 +386,22 @@ body {
 
   .controls {
     display: grid;
-    grid-template-columns: minmax(72px, 0.75fr) minmax(142px, 1.25fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     gap: 8px;
     overflow-x: visible;
   }
 
   .controls__brush,
   .controls__dragon-size {
+    grid-template-columns: auto minmax(48px, 1fr) 3ch;
     min-width: 0;
     gap: 4px;
     white-space: nowrap;
+  }
+
+  .timeline {
+    grid-template-columns: auto auto minmax(64px, 1fr) 42px;
+    gap: 6px;
   }
 
   .controls__brush input[type="range"],
