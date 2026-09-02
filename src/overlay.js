@@ -81,6 +81,16 @@ export function dragonSpriteOrigin(
   };
 }
 
+/**
+ * ドラゴン表示サイズを整数化して許容範囲へ収める。
+ * 入力：サイズ・最小・最大・不正値時の既定値 / 出力：正規化済みセル数。
+ */
+export function normalizeDragonSpriteCells(value, min, max, fallback = min) {
+  const numericValue = Number(value);
+  const safeValue = Number.isFinite(numericValue) ? numericValue : fallback;
+  return Math.min(max, Math.max(min, Math.round(safeValue)));
+}
+
 class CreatureOverlay {
   constructor(canvas, cols, rows, options) {
     this.ctx = canvas.getContext("2d");
@@ -89,7 +99,13 @@ class CreatureOverlay {
     this.width = canvas.width;
     this.height = canvas.height;
     this.bugSpriteCells = options.bugSpriteCells;
-    this.dragonSpriteCells = options.dragonSpriteCells;
+    this.dragonSpriteMinCells = options.dragonSpriteMinCells;
+    this.dragonSpriteMaxCells = options.dragonSpriteMaxCells;
+    this.dragonSpriteCells = normalizeDragonSpriteCells(
+      options.dragonSpriteCells,
+      this.dragonSpriteMinCells,
+      this.dragonSpriteMaxCells
+    );
     // 虫のドット絵を実寸(ビットマップ解像度)のオフスクリーンへ一度だけ焼いておき、
     // 毎フレームは drawImage で拡大転写する（描画コストを抑える）。
     this.bugSprite = this._bakeSprite(
@@ -141,6 +157,17 @@ class CreatureOverlay {
   resize(width, height) {
     this.width = width;
     this.height = height;
+  }
+
+  /** 表示中を含む全ドラゴンの画像サイズを変更し、確定値を返す。 */
+  setDragonSpriteCells(value) {
+    this.dragonSpriteCells = normalizeDragonSpriteCells(
+      value,
+      this.dragonSpriteMinCells,
+      this.dragonSpriteMaxCells,
+      this.dragonSpriteCells
+    );
+    return this.dragonSpriteCells;
   }
 
   /**
