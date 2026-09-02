@@ -10,18 +10,29 @@
 </head>
 <body>
   <canvas id="scene"></canvas>
-  <!-- 生きもの（虫）をドット絵で重ね描きする透明キャンバス。描画操作は下の #scene が受ける -->
+  <!-- 風ベクトルと引力点を可視化する透明キャンバス -->
+  <canvas id="fields"></canvas>
+  <!-- 生きもの（虫・ドラゴン）を重ね描きする透明キャンバス。描画操作は下の #scene が受ける -->
   <canvas id="creatures"></canvas>
 
   <!-- タイトルと操作ヒント（クリックを妨げないよう pointer-events は無効） -->
   <div class="overlay">
     <h1 class="overlay__title">Falling Sand</h1>
-    <p class="overlay__hint">素材を選んで画面をなぞる ／ Space=停止 ／ C=全消去</p>
+    <p class="overlay__hint" id="mode-hint" aria-live="polite">素材を選んで画面をなぞる</p>
   </div>
 
   <!-- 操作パネル：素材パレット・筆サイズ・停止・消去 -->
   <div class="toolbar">
     <div class="palette" id="palette" aria-label="素材パレット"></div>
+    <div class="toolstrip" id="field-tools" aria-label="音と力場の操作">
+      <button type="button" class="toolstrip__btn toolstrip__btn--active" data-field-tool="material" aria-pressed="true">素材</button>
+      <button type="button" class="toolstrip__btn toolstrip__btn--wind" data-field-tool="wind" aria-pressed="false">風</button>
+      <button type="button" class="toolstrip__btn toolstrip__btn--attractor" data-field-tool="attractor" aria-pressed="false">引力</button>
+      <button type="button" class="toolstrip__btn" data-field-tool="field-eraser" aria-pressed="false">場消し</button>
+      <button type="button" id="rotate-gravity" class="toolstrip__btn" aria-label="重力を時計回りに回す">重力 ↓</button>
+      <button type="button" id="toggle-sound" class="toolstrip__btn" aria-pressed="false">音 OFF</button>
+      <button type="button" id="clear-fields" class="toolstrip__btn">力場消去</button>
+    </div>
     <div class="controls">
       <label class="controls__brush">
         筆

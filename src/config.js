@@ -43,6 +43,26 @@ export const CONFIG = {
     bugSenseRadius: 6, // 餌・危険を感知する範囲（セル）
     bugDigChance: 0.3, // 進路上の砂を掘って進む確率（粘りの表現）
     bugMoveChance: 0.65, // 徘徊で実際に1歩動く確率（せかせか感の調整）
+    dragonMoveChance: 0.08, // ドラゴンが接地中に左右へ1歩動く確率（ゆっくり歩かせる）
+    dragonFireChance: 0.006, // 左方向へ火を吐く確率（平均数秒に1回程度）
+    dragonFireRange: 4, // 火炎が届くセル数。壁や不燃素材で止まる
+  },
+  forces: {
+    moveChance: 0.55, // 風・引力で動く素材が1ステップ移動する確率
+    attractionRadius: 24, // 引力点が届く半径（セル）
+    maxAttractors: 8, // 同時に置ける引力点。超過時は古い点から外す
+    sampleStride: 6, // 風の可視化を間引くセル間隔
+    windColor: "#a78bfa", // 風ベクトルの表示色
+    attractorColor: "#f472b6", // 引力点の表示色
+  },
+  sonification: {
+    masterGain: 0.12, // 全体音量。反応が重なっても耳を刺さない上限
+    minIntervalMs: 90, // 同種反応の最短発音間隔（密集反応は1音へ集約）
+    ignitionHz: 720, // 着火音の基準周波数
+    condensationHz: 980, // 結露音の開始周波数
+    condensationEndHz: 620, // 結露音の終端周波数
+    dissolutionFilterHz: 420, // 溶解ノイズのローパス周波数
+    noiseDuration: 0.24, // 溶解ノイズの長さ（秒）
   },
   render: {
     background: 0x0b0d12, // 空セル（背景）の色
@@ -51,5 +71,7 @@ export const CONFIG = {
     cellJitter: 0.14, // 非発光素材の明度ゆらぎ（のっぺり感を抑える）
     bugSpriteCells: 3, // 虫のドット絵が占める画面上のセル数（1セルの個体を数セル分へ拡大表示）
     bugSpriteDark: 0x7a0f3d, // 虫のドット絵の副色（頭・脚・斑）。体色より暗い赤紫で、体上でも背景上でも視認できる
+    dragonSpriteCells: 12, // 添付画像のドラゴンを大きな1個体として表示するセル数
+    dragonBackgroundThreshold: 24, // JPEGの黒背景を透明とみなすRGB上限
   },
 };
