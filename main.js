@@ -17,7 +17,7 @@ const logger = {
 // パレットに出す素材の並び（EMPTY=消しゴムを先頭に）
 const PALETTE_ORDER = [
   MAT.EMPTY, MAT.SAND, MAT.WATER, MAT.OIL, MAT.FIRE,
-  MAT.WOOD, MAT.PLANT, MAT.BUG, MAT.LAVA, MAT.ACID, MAT.WALL,
+  MAT.WOOD, MAT.PLANT, MAT.BUG, MAT.DRAGON, MAT.LAVA, MAT.ACID, MAT.WALL,
 ];
 
 // アプリ全体で共有する状態
@@ -203,7 +203,7 @@ function paintAt(clientX, clientY) {
 function loop() {
   if (!paused) sim.step();
   renderer.render(sim.grid);
-  if (overlay) overlay.render(sim.grid); // 本体の上へ虫のドット絵を重ねる
+  if (overlay) overlay.render(sim.grid, sim.heading); // 本体の上へ生きもののドット絵を重ねる
   requestAnimationFrame(loop);
 }
 

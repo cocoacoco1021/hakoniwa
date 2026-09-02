@@ -22,6 +22,7 @@ export const MAT = {
   LAVA: 10,
   ACID: 11,
   BUG: 12,
+  DRAGON: 13,
 };
 
 // behavior はステップ処理の分岐キー。physics 側はこれで挙動を選ぶ。
@@ -35,6 +36,7 @@ export const MAT = {
 //   acid   : 酸（液体＋可溶物を溶かす）
 //   plant  : 植物（静止＋水へ成長。可燃）
 //   creature: 生きもの（虫）。意思を持って動く個体。採餌・繁殖・逃避・餓死する
+//   dragon : 火を吐く生きもの。歩き回り、炎に強く、進行方向へ火炎を放つ
 export const MATERIALS = [
   { id: MAT.EMPTY, key: "empty", label: "消しゴム", behavior: "empty", density: 1, color: 0x0b0d12, emissive: 0, flammable: false },
   { id: MAT.WALL, key: "wall", label: "壁", behavior: "static", density: Infinity, color: 0x6b7280, emissive: 0, flammable: false },
@@ -50,6 +52,8 @@ export const MATERIALS = [
   { id: MAT.ACID, key: "acid", label: "酸", behavior: "acid", density: 4, color: 0x9be600, emissive: 0, flammable: false },
   // 虫は密度Infinity＝他素材から押し流されない（＝isStatic扱い）。移動は creature ロジックが担う。
   { id: MAT.BUG, key: "bug", label: "虫", behavior: "creature", density: Infinity, color: 0xff2d95, emissive: 0, flammable: false },
+  // ドラゴンも密度Infinity。移動・火吐きは dragon ロジックが担う。炎に強く flammable=false。
+  { id: MAT.DRAGON, key: "dragon", label: "ドラゴン", behavior: "dragon", density: Infinity, color: 0x35a34a, emissive: 0, flammable: false },
 ];
 
 // ID から素材定義を引くための添字表（配列添字＝ID なのでそのまま使える）。

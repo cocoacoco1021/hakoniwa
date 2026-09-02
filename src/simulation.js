@@ -37,8 +37,9 @@ export class Simulation {
 
     const size = cols * rows;
     this.grid = new Uint8Array(size); // 各セルの素材ID
-    this.life = new Uint16Array(size); // 火/煙/蒸気の残り寿命
+    this.life = new Uint16Array(size); // 火/煙/蒸気の残り寿命（虫/ドラゴンはエネルギー）
     this.moved = new Uint8Array(size); // このステップで確定済みか（二重処理防止）
+    this.heading = new Int8Array(size); // ドラゴンの向き（-1=左 / +1=右）。0は未設定(=左扱い)
     this.frame = 0; // 走査方向を交互にするためのフレーム番号
   }
 
@@ -68,6 +69,8 @@ export class Simulation {
     const i = this.index(x, y);
     this.grid[i] = id;
     this.life[i] = this._initialLife(id);
+    // ドラゴンは向きを持つ。生成時は絵柄どおり左向きで置く。
+    if (id === MAT.DRAGON) this.heading[i] = -1;
   }
 
   /** グリッド全体を空にする */
@@ -116,6 +119,9 @@ export class Simulation {
             break;
           case "creature":
             this._updateBug(x, y);
+            break;
+          case "dragon":
+            this._updateDragon(x, y);
             break;
           // empty / static は何もしない（着火は火/溶岩側から作用する）
         }
@@ -170,8 +176,9 @@ export class Simulation {
 
   /** 火/煙/蒸気の初期寿命（＝虫なら初期エネルギー）を、設定のゆらぎ幅で散らして返す */
   _initialLife(id) {
-    // 虫は寿命ではなくエネルギーを life に持つ。ゆらぎは付けず一定値で始める。
+    // 虫・ドラゴンは寿命ではなくエネルギーを life に持つ。ゆらぎは付けず一定値で始める。
     if (id === MAT.BUG) return this.creatures.bugStartEnergy ?? 0;
+    if (id === MAT.DRAGON) return this.creatures.dragonStartEnergy ?? 0;
     const { fireLife, smokeLife, steamLife, lifeJitter } = this.physics;
     let base = 0;
     if (id === MAT.FIRE) base = fireLife;
@@ -446,6 +453,119 @@ export class Simulation {
     this.grid[from] = MAT.EMPTY;
     this.life[from] = 0;
     this.moved[from] = 1;
+  }
+
+  // ------------------------------------------------------------------
+  // ドラゴン：火を吐く大型の生きもの。歩き回り、炎に強く（焼死しない）、
+  // 進行方向へ火炎ブレスを放つ。植物や虫を捕食してエネルギーを保つ。
+  // ------------------------------------------------------------------
+
+  /**
+   * ドラゴン1個体を1ステップ更新する。
+   * 入力：x, y（ドラゴンセルの座標）/ 出力：なし
+   * 優先度: 餓死 → 溺死 → 火吐き → 捕食 → 落下 → 前進（壁で反転）。
+   * 炎には強く、火/溶岩が隣接しても焼けない。
+   */
+  _updateDragon(x, y) {
+    const i = this.index(x, y);
+    const c = this.creatures;
+    const dir = this.heading[i] || -1; // 0（未設定）は左向き扱い
+
+    // 生存コストでエネルギーを1消費。尽きたら寿命で消える。
+    const energy = this.life[i] - 1;
+    this.life[i] = energy;
+    if (energy <= 0) return this._convert(x, y, MAT.EMPTY);
+
+    // 炎には強いので焼死しない。ただし水に四方を囲まれると沈んで消える。
+    if (this._countNeighbors(x, y, (id) => id === MAT.WATER) >= 4) {
+      return this._convert(x, y, MAT.EMPTY);
+    }
+
+    // 確率で進行方向へ火を吐く（動く前に吐く）。
+    if (this.random() < c.dragonBreatheChance) {
+      this._breatheFire(x, y, dir);
+    }
+
+    // 隣接する植物・虫を捕食する（そのセルへ移動しエネルギー回復）。
+    for (const [dx, dy] of NEIGHBORS4) {
+      const target = this.get(x + dx, y + dy);
+      if (target === MAT.PLANT || target === MAT.BUG) {
+        return this._moveDragon(x, y, x + dx, y + dy, c.dragonEatEnergy, Math.sign(dx) || dir);
+      }
+    }
+
+    // 下が空なら落下する（浮かせない。向きは保つ）。
+    if (this.get(x, y + 1) === MAT.EMPTY) return this._moveDragon(x, y, x, y + 1, 0, dir);
+
+    // 前進：進行方向へ1歩。塞がれていたら反対を試し、それも無理なら向きだけ反転。
+    if (this.random() < c.dragonMoveChance) {
+      if (this._dragonStep(x, y, dir)) return;
+      if (this._dragonStep(x, y, -dir)) return;
+      this.heading[i] = -dir;
+    }
+  }
+
+  /**
+   * ドラゴンを水平方向(dir)へ1歩動かそうと試みる。
+   * 入力：x, y（現在地）, dir（-1/+1）/ 出力：動けたら true
+   * 空セルへは移動、植物/虫へは移動して捕食。それ以外（壁/砂/水など）は不可。
+   */
+  _dragonStep(x, y, dir) {
+    if (dir === 0) return false;
+    const nx = x + dir;
+    const ny = y;
+    if (!this.inBounds(nx, ny)) return false;
+    const target = this.grid[this.index(nx, ny)];
+    if (target === MAT.EMPTY) {
+      this._moveDragon(x, y, nx, ny, 0, dir);
+      return true;
+    }
+    if (target === MAT.PLANT || target === MAT.BUG) {
+      this._moveDragon(x, y, nx, ny, this.creatures.dragonEatEnergy, dir);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * ドラゴンを(nx,ny)へ移動させ、移動先の中身は消費する。向き(dir)も一緒に運ぶ。
+   * 入力：x, y（元）, nx, ny（先）, gain（回復量）, dir（移動後の向き -1/+1）
+   * 出力：なし。エネルギーは上限で頭打ち、元セルは空にして向きを消す。
+   */
+  _moveDragon(x, y, nx, ny, gain, dir) {
+    const from = this.index(x, y);
+    const to = this.index(nx, ny);
+    const energy = Math.min(this.creatures.dragonMaxEnergy, this.life[from] + gain);
+    this.grid[to] = MAT.DRAGON;
+    this.life[to] = energy;
+    this.heading[to] = dir || this.heading[from] || -1;
+    this.moved[to] = 1;
+    this.grid[from] = MAT.EMPTY;
+    this.life[from] = 0;
+    this.heading[from] = 0;
+    this.moved[from] = 1;
+  }
+
+  /**
+   * 進行方向へ一直線に火炎ブレスを放つ。
+   * 入力：x, y（口元＝ドラゴン位置）, dir（-1/+1）/ 出力：なし
+   * 空セルは炎に変え、可燃物に当たったら着火して止まる。壁等で遮られても止まる。
+   */
+  _breatheFire(x, y, dir) {
+    const reach = this.creatures.dragonFireReach ?? 0;
+    for (let step = 1; step <= reach; step++) {
+      const nx = x + dir * step;
+      if (!this.inBounds(nx, y)) break;
+      const target = this.grid[this.index(nx, y)];
+      if (target === MAT.EMPTY) {
+        this._convert(nx, y, MAT.FIRE);
+      } else if (FLAMMABLE[target]) {
+        this._convert(nx, y, MAT.FIRE); // 可燃物に直接着火して止まる
+        break;
+      } else {
+        break; // 壁・水・砂などで遮られたら止まる
+      }
+    }
   }
 
   /** 感知範囲内で predicate に合う最も近いセルへの方向 {dx,dy} を返す（無ければ null） */

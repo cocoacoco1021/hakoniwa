@@ -43,13 +43,22 @@ export const CONFIG = {
     bugSenseRadius: 6, // 餌・危険を感知する範囲（セル）
     bugDigChance: 0.3, // 進路上の砂を掘って進む確率（粘りの表現）
     bugMoveChance: 0.65, // 徘徊で実際に1歩動く確率（せかせか感の調整）
+
+    // ドラゴン：火を吐く大型の生きもの。虫より長命でゆっくり歩き、炎に強い。
+    dragonStartEnergy: 1500, // 生成時のエネルギー。虫より遥かに長生き
+    dragonMaxEnergy: 3000, // エネルギー上限
+    dragonEatEnergy: 400, // 植物や虫を1つ捕食して回復する量
+    dragonMoveChance: 0.5, // 1歩踏み出す確率（重量感のためやや低め）
+    dragonBreatheChance: 0.07, // 1ステップで火を吐く確率
+    dragonFireReach: 3, // 火炎ブレスが届くセル数（進行方向へ一直線）
   },
   render: {
     background: 0x0b0d12, // 空セル（背景）の色
     glowStrength: 0.9, // 発光素材(火/溶岩)のにじみ強度（WebGL2経路のみ）
     glowRadius: 1.7, // グローのサンプル半径（テクセル単位）
     cellJitter: 0.14, // 非発光素材の明度ゆらぎ（のっぺり感を抑える）
-    bugSpriteCells: 3, // 虫のドット絵が占める画面上のセル数（1セルの個体を数セル分へ拡大表示）
+    bugSpriteCells: 6, // 虫のドット絵が占める画面上のセル数（小さすぎて点に見えたので拡大）
     bugSpriteDark: 0x7a0f3d, // 虫のドット絵の副色（頭・脚・斑）。体色より暗い赤紫で、体上でも背景上でも視認できる
+    dragonSpriteCells: 11, // ドラゴンのドット絵の横幅（セル数）。虫よりはっきり大きく見せる（高さは絵の縦横比で自動）
   },
 };

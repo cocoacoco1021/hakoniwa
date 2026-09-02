@@ -39,3 +39,52 @@ export function spritePixels(sprite) {
   }
   return { width: sprite.width, height: sprite.height, body, dark };
 }
+
+// 横向き（左向き）のドラゴンのドット絵。虫より多色（緑2階調＋金＋赤）で描く。
+// 文字→色は palette で定義する。'.'=透明。左を向いているので、右へ歩くときは
+// 描画層で左右反転して見せる（heading）。
+// G=体(緑) / g=陰影(濃い緑) / Y=角・翼・背びれ(金) / R=目・口(赤)
+export const DRAGON_SPRITE = {
+  width: 16,
+  height: 14,
+  palette: { G: 0x35a34a, g: 0x1f7a34, Y: 0xe6c235, R: 0xd23a2a },
+  rows: [
+    "....YY..........",
+    "...YYYY.........",
+    "...GGG..........",
+    "..RGGG.....YY...",
+    "..RGGGG...YYYY..",
+    "...GGGG..YYYYYY.",
+    "....GGG.YYYYYYYG",
+    ".....GGGYYYYGGGG",
+    ".....GGGGGGGGGGG",
+    "....GGGGGGGGGGGg",
+    "....GGGGGGGGGGg.",
+    "....gGGGGGGGg...",
+    "....GG.GG.GG....",
+    "....gg.gg.gg....",
+  ],
+};
+
+/**
+ * 多色ドット絵ビットマップを、色ごとのピクセル座標リストへ展開する純粋関数。
+ * 入力：sprite { width, height, palette:{文字→0xRRGGBB}, rows: string[] }（'.'=透明）
+ * 出力：{ width, height, layers: [{ color, pixels:[{x,y}] }] }
+ * 役割：色数が2色より多いスプライト（ドラゴン等）を、DOM非依存で焼けるようにする。
+ */
+export function spriteLayers(sprite) {
+  const byColor = new Map();
+  for (let y = 0; y < sprite.height; y++) {
+    const row = sprite.rows[y];
+    for (let x = 0; x < sprite.width; x++) {
+      const ch = row[x];
+      if (ch === "." || ch === undefined) continue;
+      const color = sprite.palette[ch];
+      if (color === undefined) continue; // 未定義文字は透明扱い
+      if (!byColor.has(color)) byColor.set(color, []);
+      byColor.get(color).push({ x, y });
+    }
+  }
+  const layers = [...byColor.entries()].map(([color, pixels]) => ({ color, pixels }));
+  return { width: sprite.width, height: sprite.height, layers };
+}
