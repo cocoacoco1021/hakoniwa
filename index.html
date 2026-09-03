@@ -15,7 +15,7 @@
   <!-- 生きもの（虫・ドラゴン）を重ね描きする透明キャンバス。描画操作は下の #scene が受ける -->
   <canvas id="creatures"></canvas>
 
-  <!-- タイトルと操作ヒント（クリックを妨げないよう pointer-events は無効） -->
+  <!-- タイトルと操作ヒント（上部操作パネルと重ならないよう左下へ配置） -->
   <div class="overlay">
     <h1 class="overlay__title">Falling Sand</h1>
     <p class="overlay__hint" id="mode-hint" aria-live="polite">素材を選んで画面をなぞる</p>
@@ -29,7 +29,7 @@
         <span id="toolbar-selection-label" aria-live="polite">選択: 砂</span>
       </span>
       <span class="toolbar__toggle-label" id="toolbar-toggle-label">操作を開く</span>
-      <span class="toolbar__chevron" id="toolbar-chevron" aria-hidden="true">▲</span>
+      <span class="toolbar__chevron" id="toolbar-chevron" aria-hidden="true">▼</span>
     </button>
 
     <div class="toolbar__content" id="toolbar-content" hidden>

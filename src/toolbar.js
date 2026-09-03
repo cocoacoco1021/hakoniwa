@@ -42,7 +42,7 @@ export function createToolbarDisclosure({
       expanded ? "操作パネルを閉じる" : "操作パネルを開く"
     );
     toggleLabel.textContent = expanded ? "操作を閉じる" : "操作を開く";
-    if (chevron) chevron.textContent = expanded ? "▼" : "▲";
+    if (chevron) chevron.textContent = expanded ? "▲" : "▼";
     return expanded;
   };
 

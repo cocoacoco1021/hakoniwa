@@ -65,10 +65,22 @@ test("スマホ幅では開いた操作と停止・消去を横スクロール�
 test("操作パネルと無効な時間スライダーの優先度を見分けられる", () => {
   assert.match(
     css,
-    /\.toolbar\s*\{[^}]*border-top:\s*1px solid var\(--panel-border\)[^}]*background:\s*var\(--bg\)/s
+    /\.toolbar\s*\{[^}]*border-bottom:\s*1px solid var\(--panel-border\)[^}]*background:\s*var\(--bg\)/s
   );
   assert.match(
     css,
     /\.timeline input\[type="range"\]:disabled\s*\{[^}]*opacity:\s*0\.38/s
   );
+});
+
+test("操作パネルを上部へ固定し、タイトルは下部へ退避する", () => {
+  assert.match(
+    css,
+    /\.toolbar\s*\{[^}]*top:\s*0[^}]*padding:\s*calc\(8px \+ env\(safe-area-inset-top, 0\)\) 12px 8px/s
+  );
+  assert.match(
+    css,
+    /\.overlay\s*\{[^}]*bottom:\s*env\(safe-area-inset-bottom, 0\)/s
+  );
+  assert.match(html, /id="toolbar-chevron"[^>]*>▼<\/span>/);
 });

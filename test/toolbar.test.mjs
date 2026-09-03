@@ -57,14 +57,14 @@ test("操作パネルは閉じて始まり、ボタンで開閉する", () => {
   assert.equal(content.hidden, true);
   assert.equal(attributes.get("aria-expanded"), "false");
   assert.equal(toggleLabel.textContent, "操作を開く");
-  assert.equal(chevron.textContent, "▲");
+  assert.equal(chevron.textContent, "▼");
 
   listeners.get("click")();
   assert.equal(disclosure.expanded, true);
   assert.equal(content.hidden, false);
   assert.equal(attributes.get("aria-expanded"), "true");
   assert.equal(attributes.get("aria-label"), "操作パネルを閉じる");
-  assert.equal(chevron.textContent, "▼");
+  assert.equal(chevron.textContent, "▲");
 
   listeners.get("click")();
   assert.equal(disclosure.expanded, false);
