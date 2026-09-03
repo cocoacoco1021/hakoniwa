@@ -15,6 +15,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   margin: 0;
@@ -22,7 +26,7 @@ body {
   overflow: hidden;
   background: var(--bg);
   color: var(--text);
-  font-family: "Hiragino Sans", "Yu Gothic UI", system-ui, sans-serif;
+  font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", sans-serif;
   -webkit-user-select: none;
   user-select: none;
   overscroll-behavior: none;
@@ -48,7 +52,7 @@ body {
   pointer-events: none; /* 下の #scene の描画操作を妨げない */
 }
 
-/* --- 左上のタイトル・ヒント --- */
+/* --- 初回版と同じ左上のタイトル・ヒント --- */
 .overlay {
   position: fixed;
   top: env(safe-area-inset-top, 0);
@@ -62,7 +66,6 @@ body {
   font-size: 18px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  font-family: "Avenir Next", "Hiragino Sans", sans-serif;
 }
 
 .overlay__hint {
@@ -71,17 +74,30 @@ body {
   color: var(--text-dim);
 }
 
-/* --- 下部の操作パネル --- */
+/* --- 初回版と同じ画面下の薄い操作帯 --- */
 .toolbar {
   position: fixed;
+  bottom: 0;
   left: 0;
   right: 0;
-  bottom: 0;
   padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0));
   display: flex;
   flex-direction: column;
   gap: 8px;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+}
+
+.toolbar__details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(50vh, 320px);
+  padding: 8px;
+  overflow-y: auto;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.18);
 }
 
 .palette {
@@ -126,7 +142,7 @@ body {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .toolstrip {
@@ -161,7 +177,7 @@ body {
 
 .toolstrip__btn--active {
   border-color: var(--accent);
-  color: #ecfeff;
+  color: var(--text);
   box-shadow: 0 0 0 1px var(--accent);
 }
 
@@ -177,7 +193,7 @@ body {
 
 .toolstrip__btn--sound-on {
   border-color: var(--accent);
-  color: #ecfeff;
+  color: var(--text);
   box-shadow: 0 0 0 1px var(--accent);
 }
 
@@ -188,10 +204,15 @@ body {
 
 .timeline {
   display: grid;
-  grid-template-columns: auto minmax(120px, 1fr) 52px;
+  grid-template-columns: auto auto minmax(120px, 1fr) 52px;
   align-items: center;
   gap: 8px;
   min-width: 0;
+}
+
+.timeline__label {
+  color: var(--text-dim);
+  font-size: 13px;
 }
 
 .timeline__btn {
@@ -230,9 +251,12 @@ body {
   accent-color: var(--accent);
 }
 
+.timeline input[type="range"]:disabled {
+  opacity: 0.38;
+}
+
 .timeline__position {
   color: var(--text-dim);
-  font-family: "Avenir Next", "Hiragino Sans", sans-serif;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   text-align: right;
@@ -252,7 +276,8 @@ body {
 
 .controls__brush,
 .controls__dragon-size {
-  display: inline-flex;
+  display: inline-grid;
+  grid-template-columns: auto minmax(80px, 120px) 3ch;
   align-items: center;
   gap: 8px;
   font-size: 13px;
@@ -271,10 +296,10 @@ body {
   width: 100px;
 }
 
+.controls__brush output,
 .controls__dragon-size output {
   min-width: 2ch;
   color: var(--text);
-  font-family: "Avenir Next", "Hiragino Sans", sans-serif;
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
@@ -294,7 +319,32 @@ body {
   transform: scale(0.96);
 }
 
+.toolbar__details-toggle {
+  min-height: 44px;
+  padding: 7px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.toolbar__details-toggle:active {
+  transform: scale(0.96);
+}
+
+.toolbar__chevron {
+  color: var(--accent);
+}
+
 .palette__item:focus-visible,
+.toolbar__details-toggle:focus-visible,
 .toolstrip__btn:focus-visible,
 .timeline__btn:focus-visible,
 .timeline input:focus-visible,
@@ -305,11 +355,86 @@ body {
   outline-offset: 2px;
 }
 
+@media (max-width: 600px) {
+  .toolstrip {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+    overflow-x: visible;
+  }
+
+  .toolstrip__btn {
+    flex: 0 1 auto;
+    min-width: 0;
+    padding-inline: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    gap: 8px;
+    overflow-x: visible;
+  }
+
+  .controls__brush,
+  .controls__dragon-size {
+    grid-template-columns: auto minmax(48px, 1fr) 3ch;
+    min-width: 0;
+    gap: 4px;
+    white-space: nowrap;
+  }
+
+  .timeline {
+    grid-template-columns: auto auto minmax(64px, 1fr) 42px;
+    gap: 6px;
+  }
+
+  .controls__brush input[type="range"],
+  .controls__dragon-size input[type="range"] {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .controls__btn {
+    min-width: 46px;
+    padding-inline: 8px;
+  }
+
+  .controls__brush {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .controls__dragon-size {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  #toggle-pause {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  #clear {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .toolbar__details-toggle {
+    grid-column: 4;
+    grid-row: 1;
+    padding-inline: 8px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .palette__item,
   .toolstrip__btn,
   .timeline__btn,
-  .controls__btn {
+  .controls__btn,
+  .toolbar__details-toggle {
     transition: none;
   }
 }
