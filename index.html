@@ -15,27 +15,16 @@
   <!-- 生きもの（虫・ドラゴン）を重ね描きする透明キャンバス。描画操作は下の #scene が受ける -->
   <canvas id="creatures"></canvas>
 
-  <!-- タイトルと操作ヒント（上部操作パネルと重ならないよう左下へ配置） -->
+  <!-- 初回版と同じく、作品名は遊び場の左上に静かに重ねる -->
   <div class="overlay">
     <h1 class="overlay__title">Falling Sand</h1>
     <p class="overlay__hint" id="mode-hint" aria-live="polite">素材を選んで画面をなぞる</p>
   </div>
 
-  <!-- 操作パネル：閉じても選択中の道具が分かり、遊び場を広く保てる -->
+  <!-- 初回版の位置と構成を基準にした、画面下の薄い操作帯 -->
   <div class="toolbar" id="toolbar">
-    <button type="button" class="toolbar__toggle" id="toggle-toolbar" aria-expanded="false" aria-controls="toolbar-content">
-      <span class="toolbar__selection">
-        <span class="toolbar__selection-swatch" id="toolbar-selection-swatch" aria-hidden="true"></span>
-        <span id="toolbar-selection-label" aria-live="polite">選択: 砂</span>
-      </span>
-      <span class="toolbar__toggle-label" id="toolbar-toggle-label">操作を開く</span>
-      <span class="toolbar__chevron" id="toolbar-chevron" aria-hidden="true">▼</span>
-    </button>
-
-    <div class="toolbar__content" id="toolbar-content" hidden>
-      <div class="palette" id="palette" aria-label="素材パレット"></div>
+    <div class="toolbar__details" id="toolbar-content" hidden>
       <div class="toolstrip" id="field-tools" aria-label="音と力場の操作">
-        <button type="button" class="toolstrip__btn toolstrip__btn--active" data-field-tool="material" aria-pressed="true">素材</button>
         <button type="button" class="toolstrip__btn toolstrip__btn--wind" data-field-tool="wind" aria-pressed="false">風</button>
         <button type="button" class="toolstrip__btn toolstrip__btn--attractor" data-field-tool="attractor" aria-pressed="false">引力</button>
         <button type="button" class="toolstrip__btn" data-field-tool="field-eraser" aria-pressed="false">場消し</button>
@@ -49,20 +38,26 @@
         <input type="range" id="time-scrubber" min="0" max="0" value="0" disabled aria-label="時間を巻き戻す" />
         <output id="timeline-position" class="timeline__position" for="time-scrubber">いま</output>
       </div>
-      <div class="controls">
-        <label class="controls__brush" id="brush-size-control">
-          <span>筆サイズ</span>
-          <input type="range" id="brush-size" aria-label="筆の大きさ" />
-          <output id="brush-size-value" for="brush-size">--</output>
-        </label>
-        <label class="controls__dragon-size" id="dragon-size-control" hidden>
-          <span>ドラゴンサイズ</span>
-          <input type="range" id="dragon-size" aria-label="ドラゴンの表示サイズ" />
-          <output id="dragon-size-value" for="dragon-size">--</output>
-        </label>
-        <button type="button" id="toggle-pause" class="controls__btn" aria-pressed="false">停止</button>
-        <button type="button" id="clear" class="controls__btn">消去</button>
-      </div>
+    </div>
+
+    <div class="palette" id="palette" aria-label="素材パレット"></div>
+    <div class="controls">
+      <label class="controls__brush" id="brush-size-control">
+        <span>筆</span>
+        <input type="range" id="brush-size" aria-label="筆の大きさ" />
+        <output id="brush-size-value" for="brush-size">--</output>
+      </label>
+      <label class="controls__dragon-size" id="dragon-size-control" hidden>
+        <span>ドラゴン</span>
+        <input type="range" id="dragon-size" aria-label="ドラゴンの表示サイズ" />
+        <output id="dragon-size-value" for="dragon-size">--</output>
+      </label>
+      <button type="button" id="toggle-pause" class="controls__btn" aria-pressed="false">停止</button>
+      <button type="button" id="clear" class="controls__btn">消去</button>
+      <button type="button" class="toolbar__details-toggle" id="toggle-toolbar" aria-expanded="false" aria-controls="toolbar-content">
+        <span id="toolbar-toggle-label">詳細操作</span>
+        <span class="toolbar__chevron" id="toolbar-chevron" aria-hidden="true">▲</span>
+      </button>
     </div>
   </div>
 

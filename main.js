@@ -219,7 +219,7 @@ function selectTool(tool) {
 }
 
 /**
- * 下部操作パネルの開閉を登録する。
+ * 下部操作帯の詳細操作の開閉を登録する。
  * 入力：なし / 出力：なし。
  */
 function bindToolbarDisclosure() {
@@ -232,16 +232,14 @@ function bindToolbarDisclosure() {
 }
 
 /**
- * 選択中の道具を要約し、関係するスライダーだけを表示する。
+ * 選択中の素材と履歴に応じて追加スライダーだけを表示する。
  * 入力：なし / 出力：なし。
  */
 function syncToolbarContext() {
   const brushControl = document.getElementById("brush-size-control");
   const dragonControl = document.getElementById("dragon-size-control");
   const timelineControls = document.getElementById("timeline-controls");
-  const selectionLabel = document.getElementById("toolbar-selection-label");
-  const selectionSwatch = document.getElementById("toolbar-selection-swatch");
-  if (!brushControl || !dragonControl || !timelineControls || !selectionLabel) return;
+  if (!brushControl || !dragonControl || !timelineControls) return;
 
   const visibility = getToolbarVisibility(
     selectedTool,
@@ -251,25 +249,6 @@ function syncToolbarContext() {
   brushControl.hidden = !visibility.showBrushSize;
   dragonControl.hidden = !visibility.showDragonSize;
   timelineControls.hidden = !visibility.showTimeline;
-
-  if (selectedTool === FIELD_TOOL.MATERIAL) {
-    const material = MATERIALS[selectedMaterial];
-    selectionLabel.textContent = `選択: ${material.label}`;
-    if (selectionSwatch) {
-      selectionSwatch.style.background =
-        selectedMaterial === MAT.EMPTY ? "transparent" : hexColor(material.color);
-    }
-    return;
-  }
-
-  const toolSummary = {
-    [FIELD_TOOL.WIND]: ["風", "var(--wind)"],
-    [FIELD_TOOL.ATTRACTOR]: ["引力", "var(--attractor)"],
-    [FIELD_TOOL.ERASER]: ["場消し", "transparent"],
-  }[selectedTool];
-  if (!toolSummary) return;
-  selectionLabel.textContent = `選択: ${toolSummary[0]}`;
-  if (selectionSwatch) selectionSwatch.style.background = toolSummary[1];
 }
 
 /**

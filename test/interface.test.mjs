@@ -28,19 +28,33 @@ test("ドラゴン選択時だけ使うサイズ調整を初期状態では隠�
   assert.match(html, /id="dragon-size-value"/);
 });
 
-test("操作パネルは選択中の素材を残して開閉できる", () => {
-  assert.match(html, /id="toggle-toolbar"[^>]*aria-expanded="false"[^>]*aria-controls="toolbar-content"/);
-  assert.match(html, /id="toolbar-selection-label"[^>]*>選択: 砂/);
-  assert.match(html, /id="toolbar-content" hidden/);
+test("素材と基本操作は常時表示し、追加機能だけを詳細操作へ畳む", () => {
+  assert.match(
+    html,
+    /class="toolbar__details" id="toolbar-content" hidden[\s\S]*?id="field-tools"[\s\S]*?id="timeline-controls"[\s\S]*?<\/div>\s*<\/div>\s*<div class="palette" id="palette"/
+  );
+  assert.match(
+    html,
+    /id="brush-size-control"[\s\S]*?id="toggle-pause"[\s\S]*?id="clear"[\s\S]*?id="toggle-toolbar"/
+  );
+  assert.match(
+    html,
+    /id="toggle-toolbar"[^>]*aria-expanded="false"[^>]*aria-controls="toolbar-content"/
+  );
+  assert.match(html, /id="toolbar-toggle-label">詳細操作<\/span>/);
+  assert.doesNotMatch(html, /id="toolbar-selection-label"/);
+  assert.doesNotMatch(html, /data-field-tool="material"/);
 });
 
-test("筆サイズは用途と現在値を表示する", () => {
-  assert.match(html, /<span>筆サイズ<\/span>/);
+test("筆とドラゴンのサイズは用途と現在値を表示する", () => {
+  assert.match(html, /<span>筆<\/span>/);
   assert.match(html, /id="brush-size-value"/);
+  assert.match(html, /<span>ドラゴン<\/span>/);
+  assert.match(html, /id="dragon-size-value"/);
 });
 
 test("主要操作は44px以上のタッチ領域を持つ", () => {
-  assert.match(css, /\.toolbar__toggle\s*\{[^}]*min-height:\s*44px/s);
+  assert.match(css, /\.toolbar__details-toggle\s*\{[^}]*min-height:\s*44px/s);
   assert.match(css, /\.palette__item\s*\{[^}]*min-height:\s*44px/s);
   assert.match(css, /\.toolstrip__btn\s*\{[^}]*min-height:\s*44px/s);
   assert.match(
@@ -51,21 +65,21 @@ test("主要操作は44px以上のタッチ領域を持つ", () => {
   assert.match(css, /\.controls__btn\s*\{[^}]*min-height:\s*44px/s);
 });
 
-test("スマホ幅では開いた操作と停止・消去を横スクロールなしで配置する", () => {
+test("スマホ幅では詳細操作と常時操作を横スクロールなしで配置する", () => {
   assert.match(
     css,
-    /@media \(max-width:\s*600px\)[\s\S]*?\.toolstrip\s*\{[^}]*overflow-x:\s*visible/s
+    /@media \(max-width:\s*600px\)[\s\S]*?\.toolstrip\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\)[^}]*overflow-x:\s*visible/s
   );
   assert.match(
     css,
-    /@media \(max-width:\s*600px\)[\s\S]*?\.controls\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto auto[^}]*overflow-x:\s*visible/s
+    /@media \(max-width:\s*600px\)[\s\S]*?\.controls\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto auto auto[^}]*overflow-x:\s*visible/s
   );
 });
 
-test("操作パネルと無効な時間スライダーの優先度を見分けられる", () => {
+test("詳細操作と無効な時間スライダーの優先度を見分けられる", () => {
   assert.match(
     css,
-    /\.toolbar\s*\{[^}]*border-bottom:\s*1px solid var\(--panel-border\)[^}]*background:\s*var\(--bg\)/s
+    /\.toolbar__details\s*\{[^}]*border:\s*1px solid var\(--panel-border\)[^}]*background:\s*var\(--panel\)/s
   );
   assert.match(
     css,
@@ -73,14 +87,14 @@ test("操作パネルと無効な時間スライダーの優先度を見分け�
   );
 });
 
-test("操作パネルを上部へ固定し、タイトルは下部へ退避する", () => {
+test("初回版と同じく操作帯を下部、タイトルを左上へ配置する", () => {
   assert.match(
     css,
-    /\.toolbar\s*\{[^}]*top:\s*0[^}]*padding:\s*calc\(8px \+ env\(safe-area-inset-top, 0\)\) 12px 8px/s
+    /\.toolbar\s*\{[^}]*bottom:\s*0[^}]*padding:\s*10px 12px calc\(10px \+ env\(safe-area-inset-bottom, 0\)\)[^}]*background:\s*linear-gradient\(to top, rgba\(0, 0, 0, 0\.55\), rgba\(0, 0, 0, 0\)\)/s
   );
   assert.match(
     css,
-    /\.overlay\s*\{[^}]*bottom:\s*env\(safe-area-inset-bottom, 0\)/s
+    /\.overlay\s*\{[^}]*top:\s*env\(safe-area-inset-top, 0\)/s
   );
-  assert.match(html, /id="toolbar-chevron"[^>]*>▼<\/span>/);
+  assert.match(html, /id="toolbar-chevron"[^>]*>▲<\/span>/);
 });

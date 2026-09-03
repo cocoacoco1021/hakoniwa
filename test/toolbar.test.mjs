@@ -13,9 +13,9 @@ test("通常素材では筆サイズだけを表示する", () => {
   });
 });
 
-test("ドラゴンでは筆を隠してドラゴンサイズだけを表示する", () => {
+test("ドラゴンでは常設の筆に加えてドラゴンサイズを表示する", () => {
   assert.deepEqual(getToolbarVisibility(FIELD_TOOL.MATERIAL, MAT.DRAGON, 2), {
-    showBrushSize: false,
+    showBrushSize: true,
     showDragonSize: true,
     showTimeline: true,
   });
@@ -31,13 +31,13 @@ test("力場ツールでは効果のあるサイズ調整だけを表示する",
     true
   );
   assert.deepEqual(getToolbarVisibility(FIELD_TOOL.ATTRACTOR, MAT.SAND, 1), {
-    showBrushSize: false,
+    showBrushSize: true,
     showDragonSize: false,
     showTimeline: false,
   });
 });
 
-test("操作パネルは閉じて始まり、ボタンで開閉する", () => {
+test("詳細操作は閉じて始まり、ボタンで開閉する", () => {
   const listeners = new Map();
   const attributes = new Map();
   const toggleButton = {
@@ -56,17 +56,21 @@ test("操作パネルは閉じて始まり、ボタンで開閉する", () => {
 
   assert.equal(content.hidden, true);
   assert.equal(attributes.get("aria-expanded"), "false");
-  assert.equal(toggleLabel.textContent, "操作を開く");
-  assert.equal(chevron.textContent, "▼");
+  assert.equal(attributes.get("aria-label"), "詳細操作を開く");
+  assert.equal(toggleLabel.textContent, "詳細操作");
+  assert.equal(chevron.textContent, "▲");
 
   listeners.get("click")();
   assert.equal(disclosure.expanded, true);
   assert.equal(content.hidden, false);
   assert.equal(attributes.get("aria-expanded"), "true");
-  assert.equal(attributes.get("aria-label"), "操作パネルを閉じる");
-  assert.equal(chevron.textContent, "▲");
+  assert.equal(attributes.get("aria-label"), "詳細操作を閉じる");
+  assert.equal(toggleLabel.textContent, "閉じる");
+  assert.equal(chevron.textContent, "▼");
 
   listeners.get("click")();
   assert.equal(disclosure.expanded, false);
   assert.equal(content.hidden, true);
+  assert.equal(toggleLabel.textContent, "詳細操作");
+  assert.equal(chevron.textContent, "▲");
 });
